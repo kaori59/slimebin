@@ -267,7 +267,7 @@ Events.on(engine,'afterUpdate',()=>{
     if(a.plugin.lv===MAX&&b.plugin.lv===MAX){
       const x=(a.position.x+b.position.x)/2,y=(a.position.y+b.position.y)/2;
       if(grab&&(grab.body===a||grab.body===b))grab=null;
-      removeSlime(a);removeSlime(b);startFever(x,y);continue}
+      removeSlime(a);removeSlime(b);if(fever())rainbowBonus(x,y);else startFever(x,y);continue}
     const isWild=a.plugin.lv===0||b.plugin.lv===0,keep=a.plugin.lv===0?b:a;
     const l=keep.plugin.lv+1,x=isWild?keep.position.x:(a.position.x+b.position.x)/2,y=isWild?keep.position.y:(a.position.y+b.position.y)/2;
     if(grab&&(grab.body===a||grab.body===b))grab=null;
@@ -279,7 +279,7 @@ Events.on(engine,'afterUpdate',()=>{
     // score: bigger slimes are worth much more; quick follow-up merges chain into a combo
     combo=now-lastMergeT<1300?combo+1:1;lastMergeT=now;
     if(combo>=2&&combo>(rec.maxCombo||0)){rec.maxCombo=combo;saveRec();showRec();recPending=true}
-    let pts=l*(l+1)*5,mult=1+(combo-1)*.5,tags=[];
+    let pts=l*(l+1)*5,mult=1+Math.min(combo-1,fever()?6:999)*.5,tags=[];
     if(combo>=2)tags.push(`${combo}れんさ`);
     if(shot){mult*=2;tags.push('ナイスショット')}
     if(isWild)tags.push('ふしぎ');
@@ -290,20 +290,29 @@ Events.on(engine,'afterUpdate',()=>{
     if(combo>=3)tone('triangle',600+combo*120,900+combo*150,800+combo*120,.18,.1,.05);
     if(l>rec.best){rec.best=l;saveRec();showRec();if(l<MAX&&l>=4)toast(`はじめての ${LV[l].n}！`)}
     if(l===MAX){rec.rainbows++;saveRec();showRec();celebrate(rec.rainbows);sRainbow();
-      for(let i=0;i<5;i++)setTimeout(()=>burst(x,y,['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#c58cf0'][i],14,R(MAX)*1.2),i*90)}
+      for(let i=0;i<5;i++)setTimeout(()=>burst(x,y,['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#c58cf0'][i],14,R(MAX)*1.2),i*90);
+      // a rainbow made during a fever pops right away, so no pair is left to restart the fever
+      if(fever())setTimeout(()=>{if(!n.plugin.gone){const px=n.position.x,py=n.position.y;if(grab&&grab.body===n)grab=null;removeSlime(n);rainbowBonus(px,py)}},700)}
   }
 });
 function burst(x,y,c,n,r){for(let i=0;i<n;i++){const a=Math.random()*6.283,s=2+Math.random()*4;particles.push({x:x+Math.cos(a)*r*.7,y:y+Math.sin(a)*r*.7,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1,c,size:2+Math.random()*4})}}
 
 /* ---------- fever: two rainbows pop into 12 seconds of party ---------- */
 const RAINBOW=['#ff6b6b','#ffd93d','#6bcb77','#4dd6ff','#4d96ff','#c58cf0'];
+// during a fever, two rainbows just pop for a bonus (the fever never gets longer, so it always ends)
+function rainbowBonus(x,y){
+  const pts=3000;addScore(pts);feverPts+=pts;
+  RAINBOW.forEach((c,i)=>setTimeout(()=>burst(x,y,c,14,R(MAX)),i*60));confetti(x,y,30,8);flash(.3);shake(200,4);
+  floats.push({x,y:y-30,text:`+${pts}`,sub:'レインボーボーナス',life:1,big:true,rainbow:true});
+  [1047,1319,1568,2093].forEach((f,i)=>tone('triangle',f,f,f,.25,.12,i*.05));
+}
 function startFever(x,y){
-  const now=performance.now(),again=now<feverUntil;
-  feverUntil=(again?feverUntil:now)+FEVER_MS;if(!again)feverPts=0;
-  addScore(fever()&&again?2000*FEVER_MULT:2000);
+  const now=performance.now();
+  feverUntil=now+FEVER_MS;feverPts=0;
+  addScore(2000);
   RAINBOW.forEach((c,i)=>setTimeout(()=>burst(x,y,c,18,R(MAX)*1.3),i*70));
   flash(.55);shake(260,6);confetti(x,y,40,9);
-  floats.push({x:J.x+J.w/2,y:J.y+J.h*.34,text:again?'フィーバー延長！':'フィーバータイム！',sub:`12びょう 点数×${FEVER_MULT}`,life:1,big:true,rainbow:true});
+  floats.push({x:J.x+J.w/2,y:J.y+J.h*.34,text:'フィーバータイム！',sub:`12びょう 点数×${FEVER_MULT}`,life:1,big:true,rainbow:true});
   [523,659,784,1047,1319,1568].forEach((f,i)=>tone('triangle',f,f,f*.98,.3,.16,i*.06));tone('sine',1047,1568,2093,.6,.1,.4);
   spoons.push(makeSpoon(20,now+250));nextSpoon=now+4300;
   rollNext();slimes.forEach(s=>s.plugin.amp=Math.min(.32,s.plugin.amp+.2));
@@ -363,7 +372,7 @@ function drawSpoon(sp,now){
 let feverWas=false;
 function feverTick(now){
   const on=now<feverUntil;
-  if(on&&now>=nextSpoon&&feverUntil-now>1800&&!spoons.length){spoons.push(makeSpoon(14,now));nextSpoon=now+4300}
+  if(on&&now>=nextSpoon&&feverUntil-now>1800&&!spoons.length){spoons.push(makeSpoon(10,now));nextSpoon=now+4300}
   if(on&&Math.random()<.5)confs.push({x:Math.random()*W,y:-10,vx:(Math.random()-.5)*1.5,vy:1+Math.random()*1.5,rot:Math.random()*6,vr:(Math.random()-.5)*.3,c:RAINBOW[Math.floor(Math.random()*6)],w:5+Math.random()*4,h:3+Math.random()*2,life:1.6});
   if(on&&now-lastRain>450&&slimes.length<56){lastRain=now;
     const l=Math.random()<.65?1:2,b=addSlime(l,J.x+R(l)+Math.random()*(J.w-2*R(l)),spawnY(l));Body.setVelocity(b,{x:(Math.random()-.5)*2,y:2*gsign()});

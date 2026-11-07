@@ -175,7 +175,10 @@ let toastT;function toast(msg){toastEl.textContent=msg;toastEl.classList.add('sh
 
 /* ---------- sound ---------- */
 let ac=null,out=null;
-function audio(){if(ac)return ac;try{ac=new (window.AudioContext||window.webkitAudioContext)();out=ac.createDynamicsCompressor();out.connect(ac.destination)}catch(e){ac=null}return ac}
+function audio(){
+  // iPhone: play like a music app so sound is heard even with the silent switch on (Safari 16.4+/iOS 17)
+  try{if(navigator.audioSession&&navigator.audioSession.type!=='playback')navigator.audioSession.type='playback'}catch(e){}
+  if(ac)return ac;try{ac=new (window.AudioContext||window.webkitAudioContext)();out=ac.createDynamicsCompressor();out.connect(ac.destination)}catch(e){ac=null}return ac}
 function tone(type,f0,f1,f2,dur,vol,delay){
   if(rec.muted||!ac)return;const n=ac.currentTime+(delay||0),o=ac.createOscillator(),g=ac.createGain();o.type=type;
   o.frequency.setValueAtTime(f0,n);o.frequency.exponentialRampToValueAtTime(f1,n+dur*.25);o.frequency.exponentialRampToValueAtTime(f2,n+dur);

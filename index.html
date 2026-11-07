@@ -322,43 +322,112 @@ function startFever(x,y){
 let bigs=[],nextBig=0,shakeUntil=0,shakeAmp=0,flashA=0,confs=[];
 const flash=a=>{flashA=Math.max(flashA,a)};
 const shake=(ms,a)=>{shakeUntil=performance.now()+ms;shakeAmp=a};
-function confetti(x,y,n,sp){for(let i=0;i<n;i++){const a=Math.random()*6.283,v=sp*(.4+Math.random()*.8);
-  confs.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-sp*.5,rot:Math.random()*6,vr:(Math.random()-.5)*.4,c:RAINBOW[i%RAINBOW.length],w:5+Math.random()*5,h:3+Math.random()*3,life:1})}}
-function makeBig(n,t0){return {t0,n,fired:false,landed:false,p:{r:0,amp:.05,ph:Math.random()*6}}}
-// a giant rainbow slime drops in, lands with a wobble, then bursts into lots of little chibishizuku
+// dreamy soap bubbles instead of paper confetti
+function confetti(x,y,n,sp){for(let i=0;i<n;i++){const a=Math.random()*6.283,v=sp*(.15+Math.random()*.35);
+  confs.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,r:3+Math.random()*9,ph:Math.random()*6,life:1+Math.random()*.6})}}
+let goos=[],strands=[],rings=[];
+/* slimy sounds: squishy wobbling tones, wet sweeps and little bubble bloops */
+function sSquish(f0,f1,dur,vol,lfo,delay){
+  if(rec.muted||!ac)return;const n=ac.currentTime+(delay||0),o=ac.createOscillator(),l=ac.createOscillator(),lg=ac.createGain(),g=ac.createGain(),f=ac.createBiquadFilter();
+  o.type='sine';o.frequency.setValueAtTime(f0,n);o.frequency.exponentialRampToValueAtTime(f1,n+dur);
+  l.frequency.value=lfo;lg.gain.setValueAtTime(f0*.18,n);lg.gain.exponentialRampToValueAtTime(f0*.02,n+dur);l.connect(lg).connect(o.frequency);
+  f.type='lowpass';f.frequency.value=1400;f.Q.value=4;
+  g.gain.setValueAtTime(.0001,n);g.gain.exponentialRampToValueAtTime(vol,n+.02);g.gain.exponentialRampToValueAtTime(.0001,n+dur);
+  o.connect(f).connect(g).connect(out);o.start(n);l.start(n);o.stop(n+dur+.02);l.stop(n+dur+.02)}
+function sWet(f0,f1,dur,vol,delay){
+  if(rec.muted||!ac)return;const n=ac.currentTime+(delay||0),len=Math.floor(ac.sampleRate*dur),b=ac.createBuffer(1,len,ac.sampleRate),d=b.getChannelData(0);
+  for(let i=0;i<len;i++)d[i]=Math.random()*2-1;const s=ac.createBufferSource();s.buffer=b;
+  const f=ac.createBiquadFilter();f.type='bandpass';f.Q.value=7;f.frequency.setValueAtTime(f0,n);f.frequency.exponentialRampToValueAtTime(f1,n+dur);
+  const g=ac.createGain();g.gain.setValueAtTime(.0001,n);g.gain.exponentialRampToValueAtTime(vol,n+.015);g.gain.exponentialRampToValueAtTime(.0001,n+dur);
+  s.connect(f).connect(g).connect(out);s.start(n)}
+function sBloop(delay,vol){const f=280+Math.random()*380;tone('sine',f,f*1.9,f*2.6,.09,vol||.13,delay)}
+function makeBig(n,t0){
+  // little chibishizuku packed inside, spread like seeds in a sunflower
+  const kids=[];for(let i=0;i<n;i++){const a=i*2.39996,d=Math.sqrt((i+.5)/n)*.66;kids.push({a,d,ph:Math.random()*6})}
+  return {t0,n,kids,fired:false,landed:false,swell:false,p:{r:0,amp:.05,ph:Math.random()*6}}}
+// a giant see-through rainbow jelly, full of chibishizuku, drops in, wobbles, swells and splits open
 function bigPose(sp,now){
-  const e=(now-sp.t0)/1000,r=J.w*.27,top=gsign()>0,ty=top?J.y+J.h*.42:J.y+J.h*.58,sy=top?J.y-r*2.6:J.y+J.h+r*2.6;
+  const e=(now-sp.t0)/1000,r=J.w*.29,top=gsign()>0,ty=top?J.y+J.h*.42:J.y+J.h*.58,sy=top?J.y-r*2.6:J.y+J.h+r*2.6;
   let y=ty,st=null,rr=r;
   if(e<.5){const k=Math.max(0,e)/.5;y=sy+(ty-sy)*k*k;st={a:Math.PI/2,s:.14*k}}
-  else{const d=e-.5;st={a:Math.PI/2,s:-.24*Math.exp(-d*5)*Math.cos(d*20)};if(e>.82)rr=r*(1+(e-.82)*1.1)}
+  else{const d=e-.5;st={a:Math.PI/2,s:-.26*Math.exp(-d*4.5)*Math.cos(d*19)};if(e>.95)rr=r*(1+(e-.95)*1.4)}
   return {e,x:J.x+J.w/2,y,r:rr,st}}
-function burstBig(sp,P){
-  sp.fired=true;const room=Math.max(0,66-slimes.length),n=Math.min(sp.n,room);
-  for(let i=0;i<n;i++){const a=i/n*6.283+Math.random()*.4,d=P.r*(.2+Math.random()*.5),sp2=6+Math.random()*6;
-    const b=addSlime(1,P.x+Math.cos(a)*d,P.y+Math.sin(a)*d);Body.setVelocity(b,{x:Math.cos(a)*sp2,y:Math.sin(a)*sp2-3*gsign()});b.plugin.amp=.32}
-  burst(P.x,P.y,'#fff',30,P.r*.8);RAINBOW.forEach(c=>burst(P.x,P.y,c,12,P.r*.9));burst(P.x,P.y,LV[1].c,30,P.r);
-  confetti(P.x,P.y,80,12);flash(.75);shake(450,10);
-  noise(2600,400,.4,.3);tone('sine',140,70,45,.5,.5);
-  [784,988,1175,1568,2093].forEach((f,i)=>tone('triangle',f,f*1.01,f,.35,.11,.04+i*.045));
-  floats.push({x:P.x,y:P.y-P.r*.4,text:'パーン！',sub:`ちびしずく ×${n}`,life:1,big:true,rainbow:true,fast:true});
-  try{navigator.vibrate&&navigator.vibrate([60,30,90])}catch(e){}
+function kidPos(sp,P,k,now){const d=k.d*P.r,a=k.a+Math.sin(now/700+k.ph)*.08;return {x:P.x+Math.cos(a)*d+Math.sin(now/260+k.ph)*2,y:P.y+Math.sin(a)*d*.94+Math.cos(now/310+k.ph)*2}}
+function burstBig(sp,P,now){
+  sp.fired=true;const room=Math.max(0,70-slimes.length),list=sp.kids.slice(0,room);
+  list.forEach(k=>{const q=kidPos(sp,P,k,now),dx=q.x-P.x,dy=q.y-P.y,d=Math.hypot(dx,dy)||1,v=4+Math.random()*4+k.d*6;
+    const b=addSlime(1,q.x,q.y);Body.setVelocity(b,{x:dx/d*v,y:dy/d*v-2.5*gsign()});b.plugin.amp=.32;strands.push({b,x:P.x+dx*.25,y:P.y+dy*.25,t0:now})});
+  // the jelly skin tears into gooey rainbow drops that splat on the glass and slowly drip
+  for(let i=0;i<22;i++){const a=i/22*6.283+Math.random()*.25,v=5+Math.random()*7;
+    goos.push({x:P.x+Math.cos(a)*P.r*.85,y:P.y+Math.sin(a)*P.r*.85,vx:Math.cos(a)*v,vy:Math.sin(a)*v-2*gsign(),r:5+Math.random()*9,c:RAINBOW[i%RAINBOW.length],stuck:false,drip:0,life:1})}
+  rings.push({x:P.x,y:P.y,r:P.r,t0:now});
+  burst(P.x,P.y,LV[1].c,24,P.r*.7);confetti(P.x,P.y,26,7);flash(.35);shake(380,8);
+  sWet(1700,180,.42,.55);sSquish(210,55,.45,.5,17);sWet(500,1400,.18,.2,.08);
+  for(let i=0;i<14;i++)sBloop(.06+i*.035+Math.random()*.03,.1);
+  floats.push({x:P.x,y:P.y-P.r*.4,text:'ぷるんっ！',sub:`ちびしずく ×${list.length}`,life:1,big:true,rainbow:true,fast:true});
+  try{navigator.vibrate&&navigator.vibrate([40,20,70])}catch(e){}
 }
+function blobPath(r,amp,ph,now){ctx.beginPath();
+  for(let i=0;i<=36;i++){const t=i/36*6.283,k=1+amp*(.55*Math.sin(3*t+ph)+.35*Math.sin(5*t-ph*1.3))+.015*Math.sin(now/400+ph+t*2);
+    const x=Math.cos(t)*r*k,y=Math.sin(t)*r*k*.96;i?ctx.lineTo(x,y):ctx.moveTo(x,y)}ctx.closePath()}
+function bigXf(P){ctx.translate(P.x,P.y);ctx.rotate(P.st.a);ctx.scale(1+P.st.s,1-P.st.s*.8);ctx.rotate(-P.st.a)}
 function drawBig(sp,now){
   const P=bigPose(sp,now);if(P.e<0)return;
-  if(!sp.landed&&P.e>=.5){sp.landed=true;noise(180,60,.35,.5);tone('sine',110,70,50,.3,.35);shake(200,5);
-    burst(P.x,P.y+P.r*gsign(),'#fff',14,P.r*.4)}
-  if(!sp.fired&&P.e>=.98){burstBig(sp,P);return}
+  if(!sp.landed&&P.e>=.5){sp.landed=true;sSquish(150,70,.5,.5,13);sWet(700,160,.3,.3);shake(220,5);
+    for(let i=0;i<8;i++){const a=Math.PI+i/7*Math.PI;goos.push({x:P.x+Math.cos(a)*P.r,y:P.y+P.r*.9*gsign(),vx:Math.cos(a)*3,vy:-2*gsign(),r:3+Math.random()*4,c:LV[1].c,stuck:false,drip:0,life:.7})}}
+  if(!sp.swell&&P.e>=.86){sp.swell=true;sSquish(230,560,.28,.16,24)}
+  if(!sp.fired&&P.e>=1.12){burstBig(sp,P,now);return}
   if(sp.fired)return;
-  sp.p.r=P.r;sp.p.amp=P.e>.82?.08+.06*Math.sin(now/30):.06;sp.p.ph+=.2;
-  drawSlime(P.x,P.y,MAX,sp.p,{x:0,y:0},P.st,now,false);
+  const amp=P.e>.86?.07+.07*Math.sin(now/28):.06;sp.p.ph+=.12;
+  let cg=null;if(ctx.createConicGradient){cg=ctx.createConicGradient(now/900,0,0);['#ff8a95','#ffe07a','#8ee59a','#7fe0ff','#8fb5ff','#d7a8ff','#ff8a95'].forEach((c,i,a)=>cg.addColorStop(i/(a.length-1),c))}
+  // see-through jelly body
+  ctx.save();bigXf(P);blobPath(P.r,amp,sp.p.ph,now);
+  ctx.globalAlpha=.38;ctx.fillStyle=cg||'#c58cf0';ctx.fill();
+  const ig=ctx.createRadialGradient(0,0,P.r*.2,0,0,P.r);ig.addColorStop(0,'rgba(255,255,255,.35)');ig.addColorStop(1,'rgba(255,255,255,0)');ctx.fillStyle=ig;ctx.fill();
+  ctx.restore();
+  // chibishizuku floating inside
+  ctx.save();bigXf(P);ctx.translate(-P.x,-P.y);
+  for(const k of sp.kids){const q=kidPos(sp,P,k,now);drawSlime(q.x,q.y,1,{r:R(1)*.92,amp:P.e>.86?.12:.04,ph:k.ph+now/500},{x:0,y:0},null,now,false)}
+  ctx.restore();
+  // shiny skin on top
+  ctx.save();bigXf(P);blobPath(P.r,amp,sp.p.ph,now);ctx.globalAlpha=.85;ctx.lineWidth=3.5;ctx.strokeStyle=cg||'#c58cf0';ctx.stroke();
+  ctx.globalAlpha=.2;ctx.fillStyle=cg||'#c58cf0';ctx.fill();ctx.globalAlpha=1;
+  ctx.fillStyle='rgba(255,255,255,.8)';ctx.beginPath();ctx.ellipse(-P.r*.42,-P.r*.5,P.r*.22,P.r*.09,-.6,0,7);ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,.6)';ctx.beginPath();ctx.arc(-P.r*.16,-P.r*.66,P.r*.04,0,7);ctx.arc(P.r*.55,P.r*.35,P.r*.03,0,7);ctx.fill();
+  ctx.restore();
+}
+function drawGoo(now,ts){
+  // stretchy strands between the opening jelly and each chibishizuku as it flies out
+  for(const s of strands){const t=(now-s.t0)/320,b=s.b;if(t>=1||b.plugin.gone)continue;
+    const dx=b.position.x-s.x,dy=b.position.y-s.y,d=Math.hypot(dx,dy)||1,nx=-dy/d,ny=dx/d,w0=R(1)*.55*(1-t),w1=R(1)*.35*(1-t)+.5;
+    ctx.globalAlpha=.75*(1-t);ctx.fillStyle=LV[1].c;ctx.beginPath();
+    ctx.moveTo(s.x+nx*w0,s.y+ny*w0);ctx.quadraticCurveTo(s.x+dx*.5+nx*w1*.3,s.y+dy*.5+ny*w1*.3,b.position.x+nx*w1,b.position.y+ny*w1);
+    ctx.lineTo(b.position.x-nx*w1,b.position.y-ny*w1);ctx.quadraticCurveTo(s.x+dx*.5-nx*w1*.3,s.y+dy*.5-ny*w1*.3,s.x-nx*w0,s.y-ny*w0);ctx.fill()}
+  strands=strands.filter(s=>now-s.t0<320);
+  // the jelly skin snapping open
+  for(const g of rings){const t=(now-g.t0)/260;if(t>=1)continue;ctx.globalAlpha=(1-t)*.6;ctx.lineWidth=6*(1-t)+1;ctx.strokeStyle='#ffffff';ctx.beginPath();ctx.arc(g.x,g.y,g.r*(1+t*.6),0,7);ctx.stroke()}
+  rings=rings.filter(g=>now-g.t0<260);
+  // goo drops: fly, splat on the glass, then drip down slowly
+  for(const g of goos){
+    if(!g.stuck){g.x+=g.vx*ts;g.y+=g.vy*ts;g.vy+=.3*gsign()*ts;g.vx*=.985;g.life-=.004*ts;
+      const hit=g.x<J.x+g.r*.4||g.x>J.x+J.w-g.r*.4||g.y<J.y+g.r*.4||g.y>J.y+J.h-g.r*.4;
+      if(hit){g.stuck=true;g.x=Math.max(J.x+2,Math.min(J.x+J.w-2,g.x));g.y=Math.max(J.y+2,Math.min(J.y+J.h-2,g.y));g.vx=0;g.vy=0}}
+    else{g.drip=Math.min(g.r*3.2,g.drip+.12*ts);g.y+=.18*gsign()*ts;g.life-=.0045*ts}
+    ctx.globalAlpha=Math.max(0,Math.min(.75,g.life));ctx.fillStyle=g.c;
+    if(g.stuck){ctx.beginPath();ctx.ellipse(g.x,g.y,g.r*.95,g.r*.6,0,0,7);ctx.fill();
+      ctx.beginPath();ctx.ellipse(g.x,g.y+g.drip*.5*gsign(),g.r*.32,g.drip*.5+1,0,0,7);ctx.fill();
+      ctx.beginPath();ctx.arc(g.x,g.y+g.drip*gsign(),g.r*.38,0,7);ctx.fill()}
+    else{const sp=Math.hypot(g.vx,g.vy),a=Math.atan2(g.vy,g.vx);ctx.beginPath();ctx.ellipse(g.x,g.y,g.r*(1+Math.min(.8,sp*.06)),g.r*(1-Math.min(.35,sp*.025)),a,0,7);ctx.fill()}
+    ctx.globalAlpha=Math.max(0,Math.min(.7,g.life));ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(g.x-g.r*.3,g.y-g.r*.25,g.r*.18,0,7);ctx.fill()}
+  goos=goos.filter(g=>g.life>0);ctx.globalAlpha=1;
 }
 let feverWas=false;
 function feverTick(now){
   const on=now<feverUntil;
   if(on&&now>=nextBig&&feverUntil-now>1800&&!bigs.length){bigs.push(makeBig(12,now));nextBig=now+4300}
-  if(on&&Math.random()<.5)confs.push({x:Math.random()*W,y:-10,vx:(Math.random()-.5)*1.5,vy:1+Math.random()*1.5,rot:Math.random()*6,vr:(Math.random()-.5)*.3,c:RAINBOW[Math.floor(Math.random()*6)],w:5+Math.random()*4,h:3+Math.random()*2,life:1.6});
+  if(on&&Math.random()<.18)confs.push({x:J.x+Math.random()*J.w,y:gsign()>0?J.y+J.h-6:J.y+6,vx:0,vy:-(0.6+Math.random()*.9)*gsign(),r:3+Math.random()*8,ph:Math.random()*6,life:1.4});
   if(on&&now-lastRain>450&&slimes.length<56){lastRain=now;
-    const l=Math.random()<.65?1:2,b=addSlime(l,J.x+R(l)+Math.random()*(J.w-2*R(l)),spawnY(l));Body.setVelocity(b,{x:(Math.random()-.5)*2,y:2*gsign()});
+    const l=1,b=addSlime(l,J.x+R(l)+Math.random()*(J.w-2*R(l)),spawnY(l));Body.setVelocity(b,{x:(Math.random()-.5)*2,y:2*gsign()});
     if(Math.random()<.4)tone('sine',900+Math.random()*500,1200,700,.08,.05)}
   if(feverWas&&!on){floats.push({x:J.x+J.w/2,y:J.y+J.h*.4,text:'フィーバーおわり！',sub:`フィーバーで +${feverPts.toLocaleString()}`,life:1,big:true,rainbow:true});
     [1047,784,659,523].forEach((f,i)=>tone('triangle',f,f,f,.2,.12,i*.08));rollNext()}
@@ -395,7 +464,7 @@ document.getElementById('go').addEventListener('click',()=>{
   audio();if(ac&&ac.state==='suspended')ac.resume();
   started=true;document.getElementById('start').hidden=true;
   [...slimes].forEach(removeSlime);particles=[];floats=[];
-  feverUntil=0;feverWas=false;feverPts=0;bigs=[];confs=[];score=0;$score.textContent='0';combo=0;lastMergeT=0;recPending=false;drops=0;rollNext();
+  feverUntil=0;feverWas=false;feverPts=0;bigs=[];confs=[];goos=[];strands=[];rings=[];score=0;$score.textContent='0';combo=0;lastMergeT=0;recPending=false;drops=0;rollNext();
   floats.push({x:J.x+J.w/2,y:J.y+J.h*.42,text:'スタート！',sub:'',life:1,big:true,rainbow:true,fast:true});
   [523,784,1047].forEach((f,i)=>tone('triangle',f,f,f,.22,.16,i*.08));
 });
@@ -545,10 +614,12 @@ function frame(now){
     if(f.sub){ctx.font=`800 ${Math.round(12*sc)}px ${FONT}`;ctx.lineWidth=4;ctx.strokeText(f.sub,f.x,f.y+16*sc);ctx.fillText(f.sub,f.x,f.y+16*sc)}}
   ctx.globalAlpha=1;floats=floats.filter(f=>f.life>0);
   drawJarFront(now);
-  for(const sp of bigs)drawBig(sp,now);bigs=bigs.filter(sp=>!sp.fired&&(now-sp.t0)<3000);
-  for(const q of confs){q.x+=q.vx*ts;q.y+=q.vy*ts;q.vy+=.18*ts;q.vx*=.99;q.vy=Math.min(q.vy,3.2);q.rot+=q.vr*ts;q.life-=.006*ts;
-    ctx.save();ctx.globalAlpha=Math.min(1,Math.max(0,q.life));ctx.translate(q.x,q.y);ctx.rotate(q.rot);ctx.scale(1,Math.abs(Math.sin(q.rot*1.7))+.2);ctx.fillStyle=q.c;ctx.fillRect(-q.w/2,-q.h/2,q.w,q.h);ctx.restore()}
-  confs=confs.filter(q=>q.life>0&&q.y<H+20);
+  for(const sp of bigs)drawBig(sp,now);drawGoo(now,ts);bigs=bigs.filter(sp=>!sp.fired&&(now-sp.t0)<3000);
+  for(const q of confs){q.vx+=Math.sin(now/300+q.ph)*.02;q.vx*=.96;q.vy*=.985;q.vy-=.03*gsign();q.x+=q.vx*ts;q.y+=q.vy*ts;q.life-=.006*ts;
+    const a=Math.max(0,Math.min(1,q.life));ctx.globalAlpha=a*.7;
+    const bg=ctx.createRadialGradient(q.x-q.r*.3,q.y-q.r*.3,q.r*.1,q.x,q.y,q.r);bg.addColorStop(0,'rgba(255,255,255,0)');bg.addColorStop(.75,`hsla(${(now/8+q.ph*60)%360},90%,80%,.25)`);bg.addColorStop(1,`hsla(${(now/8+q.ph*60+120)%360},90%,75%,.8)`);
+    ctx.fillStyle=bg;ctx.beginPath();ctx.arc(q.x,q.y,q.r,0,7);ctx.fill();ctx.globalAlpha=a*.9;ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(q.x-q.r*.35,q.y-q.r*.35,q.r*.2,0,7);ctx.fill()}
+  ctx.globalAlpha=1;confs=confs.filter(q=>q.life>0&&q.y>-30&&q.y<H+30);
   ctx.restore();
   if(flashA>.01){ctx.fillStyle=`rgba(255,255,255,${flashA})`;ctx.fillRect(0,0,W,H);flashA*=.88}
   if(now<feverUntil){const left=Math.ceil((feverUntil-now)/1000);ctx.textAlign='center';ctx.font=`800 17px ${FONT}`;ctx.lineWidth=5;ctx.lineJoin='round';

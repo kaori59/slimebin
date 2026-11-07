@@ -314,65 +314,48 @@ function startFever(x,y){
   flash(.55);shake(260,6);confetti(x,y,40,9);
   floats.push({x:J.x+J.w/2,y:J.y+J.h*.34,text:'フィーバータイム！',sub:`12びょう 点数×${FEVER_MULT}`,life:1,big:true,rainbow:true});
   [523,659,784,1047,1319,1568].forEach((f,i)=>tone('triangle',f,f,f*.98,.3,.16,i*.06));tone('sine',1047,1568,2093,.6,.1,.4);
-  spoons.push(makeSpoon(20,now+250));nextSpoon=now+4300;
+  bigs.push(makeBig(24,now+250));nextBig=now+4300;
   rollNext();slimes.forEach(s=>s.plugin.amp=Math.min(.32,s.plugin.amp+.2));
   try{navigator.vibrate&&navigator.vibrate([40,40,40,40,120])}catch(e){}
 }
-/* the big spoon: slides in heaped with slimes, then tips and flings them all into the jar */
-let spoons=[],nextSpoon=0,shakeUntil=0,shakeAmp=0,flashA=0,confs=[];
+/* fever party pieces */
+let bigs=[],nextBig=0,shakeUntil=0,shakeAmp=0,flashA=0,confs=[];
 const flash=a=>{flashA=Math.max(flashA,a)};
 const shake=(ms,a)=>{shakeUntil=performance.now()+ms;shakeAmp=a};
 function confetti(x,y,n,sp){for(let i=0;i<n;i++){const a=Math.random()*6.283,v=sp*(.4+Math.random()*.8);
   confs.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-sp*.5,rot:Math.random()*6,vr:(Math.random()-.5)*.4,c:RAINBOW[i%RAINBOW.length],w:5+Math.random()*5,h:3+Math.random()*3,life:1})}}
-function makeSpoon(n,t0){
-  const heap=[],rx=J.w*.2;let row=0,placed=0;
-  while(placed<n){const cnt=Math.max(1,6-row);for(let k=0;k<cnt&&placed<n;k++){const l=1+Math.floor(Math.random()*4);
-      heap.push({l,dx:(k-(cnt-1)/2)*rx*.36+(Math.random()-.5)*4,dy:-row*rx*.27-6,ph:Math.random()*6});placed++}row++}
-  return {t0,heap,fired:false}}
-function spoonPose(sp,now){
-  const e=(now-sp.t0)/1000,cx=J.x+J.w*.48,top=gsign()>0,cy=top?J.y+J.h*.2:J.y+J.h*.82;
-  let x=cx,ang=0,a=1,lift=0;
-  if(e<.45){const k=1-Math.pow(1-Math.max(0,e)/.45,3);x=J.x+J.w+J.w*.7-(J.x+J.w+J.w*.7-cx)*k}
-  else if(e<.75){lift=Math.sin((e-.45)/.3*Math.PI)*-8}
-  else if(e<.92){ang=-1.25*((e-.75)/.17)}
-  else{ang=-1.25;const k=(e-.92)/.5;x=cx+k*J.w*.9;a=Math.max(0,1-k)}
-  return {e,x,y:cy+lift,ang:top?ang:-ang,a,flip:!top}}
-function fireSpoon(sp,pose){
-  sp.fired=true;const room=Math.max(0,60-slimes.length);
-  sp.heap.slice(0,room).forEach((h,i)=>{const b=addSlime(h.l,pose.x+h.dx,pose.y+(pose.flip?-h.dy:h.dy));
-    Body.setVelocity(b,{x:h.dx/(J.w*.2)*7+(Math.random()-.5)*5-2.5,y:(-5-Math.random()*6)*gsign()});b.plugin.amp=.32});
-  burst(pose.x,pose.y,'#fff',26,J.w*.18);RAINBOW.forEach((c,i)=>burst(pose.x,pose.y,c,10,J.w*.15));
-  confetti(pose.x,pose.y,70,11);flash(.7);shake(420,9);
-  noise(160,50,.55,.6);noise(3500,600,.45,.25);tone('sine',90,60,40,.5,.5);
-  [784,988,1175,1568].forEach((f,i)=>tone('triangle',f,f*1.01,f,.4,.12,.05+i*.05));
-  floats.push({x:pose.x,y:pose.y-30,text:'バーン！',sub:'',life:1,big:true,rainbow:true,fast:true});
+function makeBig(n,t0){return {t0,n,fired:false,landed:false,p:{r:0,amp:.05,ph:Math.random()*6}}}
+// a giant rainbow slime drops in, lands with a wobble, then bursts into lots of little chibishizuku
+function bigPose(sp,now){
+  const e=(now-sp.t0)/1000,r=J.w*.27,top=gsign()>0,ty=top?J.y+J.h*.42:J.y+J.h*.58,sy=top?J.y-r*2.6:J.y+J.h+r*2.6;
+  let y=ty,st=null,rr=r;
+  if(e<.5){const k=Math.max(0,e)/.5;y=sy+(ty-sy)*k*k;st={a:Math.PI/2,s:.14*k}}
+  else{const d=e-.5;st={a:Math.PI/2,s:-.24*Math.exp(-d*5)*Math.cos(d*20)};if(e>.82)rr=r*(1+(e-.82)*1.1)}
+  return {e,x:J.x+J.w/2,y,r:rr,st}}
+function burstBig(sp,P){
+  sp.fired=true;const room=Math.max(0,66-slimes.length),n=Math.min(sp.n,room);
+  for(let i=0;i<n;i++){const a=i/n*6.283+Math.random()*.4,d=P.r*(.2+Math.random()*.5),sp2=6+Math.random()*6;
+    const b=addSlime(1,P.x+Math.cos(a)*d,P.y+Math.sin(a)*d);Body.setVelocity(b,{x:Math.cos(a)*sp2,y:Math.sin(a)*sp2-3*gsign()});b.plugin.amp=.32}
+  burst(P.x,P.y,'#fff',30,P.r*.8);RAINBOW.forEach(c=>burst(P.x,P.y,c,12,P.r*.9));burst(P.x,P.y,LV[1].c,30,P.r);
+  confetti(P.x,P.y,80,12);flash(.75);shake(450,10);
+  noise(2600,400,.4,.3);tone('sine',140,70,45,.5,.5);
+  [784,988,1175,1568,2093].forEach((f,i)=>tone('triangle',f,f*1.01,f,.35,.11,.04+i*.045));
+  floats.push({x:P.x,y:P.y-P.r*.4,text:'パーン！',sub:`ちびしずく ×${n}`,life:1,big:true,rainbow:true,fast:true});
   try{navigator.vibrate&&navigator.vibrate([60,30,90])}catch(e){}
 }
-function drawSpoon(sp,now){
-  const P=spoonPose(sp,now);if(P.e<0)return;
-  if(!sp.fired&&P.e>=.84)fireSpoon(sp,P);
-  const rx=J.w*.2,ry=J.w*.075;
-  ctx.save();ctx.globalAlpha=P.a;ctx.translate(P.x,P.y);if(P.flip)ctx.scale(1,-1);ctx.rotate(P.ang);
-  // handle
-  const hg=ctx.createLinearGradient(0,-8,0,8);hg.addColorStop(0,'#ffffff');hg.addColorStop(.5,'#d3dae4');hg.addColorStop(1,'#9aa6b6');
-  ctx.fillStyle=hg;ctx.beginPath();ctx.moveTo(rx*.85,-5);ctx.quadraticCurveTo(rx*1.6,-16,rx*2.6,-26);ctx.lineTo(rx*2.66,-14);ctx.quadraticCurveTo(rx*1.6,-2,rx*.85,6);ctx.fill();
-  ctx.beginPath();ctx.ellipse(rx*2.66,-22,10,8,-.4,0,7);ctx.fill();
-  ctx.fillStyle=css['--ribbon'];ctx.beginPath();heart(rx*2.66,-21,6);
-  // bowl (back)
-  const bg=ctx.createLinearGradient(0,-ry,0,ry*1.6);bg.addColorStop(0,'#f6f8fb');bg.addColorStop(.6,'#c4ccd8');bg.addColorStop(1,'#8e9aab');
-  ctx.fillStyle=bg;ctx.beginPath();ctx.ellipse(0,0,rx,ry*1.55,0,0,Math.PI);ctx.lineTo(-rx,0);ctx.fill();
-  ctx.fillStyle='#e9edf3';ctx.beginPath();ctx.ellipse(0,0,rx,ry,0,0,7);ctx.fill();
-  // heap of slimes
-  if(!sp.fired)for(const h of sp.heap){const r=R(h.l)*.85;drawSlime(h.dx,h.dy-r*.4,h.l,{r,amp:.06+.05*Math.sin(now/120+h.ph),ph:h.ph+now/300},{x:0,y:0},null,now,false)}
-  // rim shine
-  ctx.strokeStyle='rgba(255,255,255,.9)';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(0,0,rx,ry,0,Math.PI*.05,Math.PI*.95);ctx.stroke();
-  ctx.fillStyle='rgba(255,255,255,.8)';ctx.beginPath();ctx.ellipse(-rx*.5,ry*.9,rx*.18,ry*.25,.2,0,7);ctx.fill();
-  ctx.restore();
+function drawBig(sp,now){
+  const P=bigPose(sp,now);if(P.e<0)return;
+  if(!sp.landed&&P.e>=.5){sp.landed=true;noise(180,60,.35,.5);tone('sine',110,70,50,.3,.35);shake(200,5);
+    burst(P.x,P.y+P.r*gsign(),'#fff',14,P.r*.4)}
+  if(!sp.fired&&P.e>=.98){burstBig(sp,P);return}
+  if(sp.fired)return;
+  sp.p.r=P.r;sp.p.amp=P.e>.82?.08+.06*Math.sin(now/30):.06;sp.p.ph+=.2;
+  drawSlime(P.x,P.y,MAX,sp.p,{x:0,y:0},P.st,now,false);
 }
 let feverWas=false;
 function feverTick(now){
   const on=now<feverUntil;
-  if(on&&now>=nextSpoon&&feverUntil-now>1800&&!spoons.length){spoons.push(makeSpoon(10,now));nextSpoon=now+4300}
+  if(on&&now>=nextBig&&feverUntil-now>1800&&!bigs.length){bigs.push(makeBig(12,now));nextBig=now+4300}
   if(on&&Math.random()<.5)confs.push({x:Math.random()*W,y:-10,vx:(Math.random()-.5)*1.5,vy:1+Math.random()*1.5,rot:Math.random()*6,vr:(Math.random()-.5)*.3,c:RAINBOW[Math.floor(Math.random()*6)],w:5+Math.random()*4,h:3+Math.random()*2,life:1.6});
   if(on&&now-lastRain>450&&slimes.length<56){lastRain=now;
     const l=Math.random()<.65?1:2,b=addSlime(l,J.x+R(l)+Math.random()*(J.w-2*R(l)),spawnY(l));Body.setVelocity(b,{x:(Math.random()-.5)*2,y:2*gsign()});
@@ -412,7 +395,7 @@ document.getElementById('go').addEventListener('click',()=>{
   audio();if(ac&&ac.state==='suspended')ac.resume();
   started=true;document.getElementById('start').hidden=true;
   [...slimes].forEach(removeSlime);particles=[];floats=[];
-  feverUntil=0;feverWas=false;feverPts=0;spoons=[];confs=[];score=0;$score.textContent='0';combo=0;lastMergeT=0;recPending=false;drops=0;rollNext();
+  feverUntil=0;feverWas=false;feverPts=0;bigs=[];confs=[];score=0;$score.textContent='0';combo=0;lastMergeT=0;recPending=false;drops=0;rollNext();
   floats.push({x:J.x+J.w/2,y:J.y+J.h*.42,text:'スタート！',sub:'',life:1,big:true,rainbow:true,fast:true});
   [523,784,1047].forEach((f,i)=>tone('triangle',f,f,f,.22,.16,i*.08));
 });
@@ -562,7 +545,7 @@ function frame(now){
     if(f.sub){ctx.font=`800 ${Math.round(12*sc)}px ${FONT}`;ctx.lineWidth=4;ctx.strokeText(f.sub,f.x,f.y+16*sc);ctx.fillText(f.sub,f.x,f.y+16*sc)}}
   ctx.globalAlpha=1;floats=floats.filter(f=>f.life>0);
   drawJarFront(now);
-  for(const sp of spoons)drawSpoon(sp,now);spoons=spoons.filter(sp=>(now-sp.t0)<1500);
+  for(const sp of bigs)drawBig(sp,now);bigs=bigs.filter(sp=>!sp.fired&&(now-sp.t0)<3000);
   for(const q of confs){q.x+=q.vx*ts;q.y+=q.vy*ts;q.vy+=.18*ts;q.vx*=.99;q.vy=Math.min(q.vy,3.2);q.rot+=q.vr*ts;q.life-=.006*ts;
     ctx.save();ctx.globalAlpha=Math.min(1,Math.max(0,q.life));ctx.translate(q.x,q.y);ctx.rotate(q.rot);ctx.scale(1,Math.abs(Math.sin(q.rot*1.7))+.2);ctx.fillStyle=q.c;ctx.fillRect(-q.w/2,-q.h/2,q.w,q.h);ctx.restore()}
   confs=confs.filter(q=>q.life>0&&q.y<H+20);

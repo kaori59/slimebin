@@ -135,7 +135,7 @@ const {Engine,Bodies,Body,Composite,Events,Query}=Matter;
 const LV=[{n:'ふしぎ玉',c:'#d9e2ec'},
   {n:'ちびしずく',c:'#7fd6f2'},{n:'マスカット',c:'#a8dc5a'},{n:'ピーチ',c:'#f7a1c4'},{n:'グレープ',c:'#a07ce0'},
   {n:'みかん',c:'#f9a03f'},{n:'ゴールドキング',c:'#e6b93a'},{n:'レインボーパール',c:'#c58cf0'}];
-const MAX=LV.length-1,FEVER_MS=12000,FEVER_MULT=3;
+const MAX=LV.length-1,FEVER_MS=40000,FEVER_BIGS=5,FEVER_MULT=3;
 const hex=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));
 const mix=(h,t,k)=>{const a=hex(h),b=t==='w'?[255,255,255]:[20,10,40];return `rgb(${a.map((v,i)=>Math.round(v+(b[i]-v)*k)).join(',')})`};
 for(let l=0;l<=MAX;l++){LV[l].light=mix(LV[l].c,'w',.55);LV[l].dark=mix(LV[l].c,'k',.28)}
@@ -395,14 +395,14 @@ function startFever(x,y){
   addScore(2000);
   RAINBOW.forEach((c,i)=>setTimeout(()=>burst(x,y,c,18,R(MAX)*1.3),i*70));
   flash(.55);shake(260,6);confetti(x,y,40,9);
-  floats.push({x:J.x+J.w/2,y:J.y+J.h*.34,text:'フィーバータイム！',sub:`12秒 点数×${FEVER_MULT}`,life:1,big:true,rainbow:true});
+  floats.push({x:J.x+J.w/2,y:J.y+J.h*.34,text:'フィーバータイム！',sub:`ゼリー${FEVER_BIGS}個 点数×${FEVER_MULT}`,life:1,big:true,rainbow:true});
   [523,659,784,1047,1319,1568].forEach((f,i)=>tone('triangle',f,f,f*.98,.3,.16,i*.06));tone('sine',1047,1568,2093,.6,.1,.4);
-  bigs.push(makeBig(48,now+250,20));nextBig=now+1600;bigN=0;
+  bigs.push(makeBig(48,now+250,20));nextBig=now+1600;bigN=0;bigMade=1;bigPopped=0;
   rollNext();slimes.forEach(s=>s.plugin.amp=Math.min(.32,s.plugin.amp+.2));
   try{navigator.vibrate&&navigator.vibrate([40,40,40,40,120])}catch(e){}
 }
 /* fever party pieces */
-let bigs=[],nextBig=0,bigN=0,shakeUntil=0,shakeAmp=0,flashA=0,confs=[];
+let bigs=[],nextBig=0,bigN=0,bigMade=0,bigPopped=0,shakeUntil=0,shakeAmp=0,flashA=0,confs=[];
 const flash=a=>{flashA=Math.max(flashA,a)};
 const shake=(ms,a)=>{shakeUntil=performance.now()+ms;shakeAmp=a};
 // dreamy soap bubbles instead of paper confetti
@@ -439,7 +439,7 @@ function bigPose(sp,now){
   return {e,x:J.x+J.w*sp.fx,y,r:rr,st}}
 function kidPos(sp,P,k,now){const d=k.d*P.r,a=k.a+Math.sin(now/700+k.ph)*.08;return {x:P.x+Math.cos(a)*d+Math.sin(now/260+k.ph)*2,y:P.y+Math.sin(a)*d*.94+Math.cos(now/310+k.ph)*2}}
 function burstBig(sp,P,now){
-  sp.fired=true;let room=Math.max(0,70-slimes.length);
+  sp.fired=true;if(now<feverUntil&&++bigPopped>=FEVER_BIGS)feverUntil=Math.min(feverUntil,now+1800);let room=Math.max(0,70-slimes.length);
   sp.kids.forEach(k=>{const q=kidPos(sp,P,k,now),dx=q.x-P.x,dy=q.y-P.y,d=Math.hypot(dx,dy)||1,v=4+Math.random()*4+k.d*6,vx=dx/d*v,vy=dy/d*v-2.5*gsign();
     let b;if(k.real&&room>0){room--;b=addSlime(1,q.x,q.y);Body.setVelocity(b,{x:vx,y:vy});b.plugin.amp=.32}
     else{b={position:{x:q.x,y:q.y},vx,vy,ph:k.ph,plugin:{gone:false},pop:now+250+Math.random()*650};ghosts.push(b)}
@@ -559,7 +559,7 @@ const BGM=(()=>{
 let feverWas=false,lastBub=0,bubLane=0;
 function feverTick(now){
   const on=now<feverUntil;
-  if(on&&now>=nextBig&&feverUntil-now>1800&&!bigs.length){bigs.push(makeBig(26,now,3,.74,[.3,.7,.5][bigN++%3]));nextBig=now+1400}
+  if(on&&now>=nextBig&&bigMade<FEVER_BIGS&&!bigs.length){bigs.push(makeBig(26,now,3,.74,[.3,.7,.5][bigN++%3]));bigMade++;nextBig=now+1400}
   if(on&&now-lastBub>=200){lastBub=now;bubLane=(bubLane+2)%5;const bx=J.x+J.w*(.1+.8*(bubLane+Math.random()*.6)/5.6);
     confs.push({x:bx,y:gsign()>0?J.y+J.h-6:J.y+6,vx:0,vy:-(1.3+Math.random()*.6)*gsign(),r:7+Math.random()*6,ph:Math.random()*6,life:1.4});sBloop(0,.035)}
   if(on&&Math.random()<.06)confs.push({x:J.x+Math.random()*J.w,y:gsign()>0?J.y+J.h-6:J.y+6,vx:0,vy:-(0.6+Math.random()*.9)*gsign(),r:3+Math.random()*8,ph:Math.random()*6,life:1.4});
@@ -763,10 +763,10 @@ function frame(now){
   ctx.restore();
   if(flashA>.01){ctx.fillStyle=`rgba(255,255,255,${flashA})`;ctx.fillRect(0,0,W,H);flashA*=.88}
   drawRapidText(now);
-  if(now<feverUntil){const left=Math.ceil((feverUntil-now)/1000);ctx.textAlign='center';ctx.font=`800 17px ${FONT}`;ctx.lineWidth=5;ctx.lineJoin='round';
-    const tx=J.x+J.w/2,ty=J.y+24,tw=ctx.measureText('フィーバー 00').width,g=ctx.createLinearGradient(tx-tw/2,0,tx+tw/2,0);
+  if(now<feverUntil&&bigPopped<FEVER_BIGS){const left=FEVER_BIGS-bigPopped;ctx.textAlign='center';ctx.font=`800 17px ${FONT}`;ctx.lineWidth=5;ctx.lineJoin='round';
+    const tx=J.x+J.w/2,ty=J.y+24,tw=ctx.measureText('フィーバー ゼリーあと0').width,g=ctx.createLinearGradient(tx-tw/2,0,tx+tw/2,0);
     ['#ff5b6b','#ff9f2e','#e8b800','#3cba5c','#2f8cff','#9b5cf0'].forEach((c,i,a)=>g.addColorStop(i/(a.length-1),c));
-    ctx.strokeStyle=css['--float-edge'];ctx.fillStyle=g;const t=`フィーバー ${left}`;ctx.strokeText(t,tx,ty);ctx.fillText(t,tx,ty)}
+    ctx.strokeStyle=css['--float-edge'];ctx.fillStyle=g;const t=`フィーバー ゼリーあと${left}`;ctx.strokeText(t,tx,ty);ctx.fillText(t,tx,ty)}
   requestAnimationFrame(frame);
 }
 

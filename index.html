@@ -248,7 +248,7 @@ const rapidOn=()=>performance.now()<rapidUntil;
 function drop(x){
   const t=performance.now();if(t-lastDrop<320)return;lastDrop=t;
   const b=addSlime(nextLv,x,spawnY(nextLv));Body.setVelocity(b,{x:0,y:2*gsign()});sDrop();rollNext();
-  if(!fever()&&!rapidReady&&++charge>=CHARGE_N){charge=CHARGE_N;rapidReady=true;readyT=t;toast('れんしゃOK！ 押しっぱなしで ぽぽぽぽっ');
+  if(!fever()&&!rapidReady&&++charge>=CHARGE_N){charge=CHARGE_N;rapidReady=true;readyT=t;
     [660,880,1175].forEach((f,i)=>tone('triangle',f,f,f,.14,.12,i*.06))}
 }
 function startRapid(){const t=performance.now();rapidReady=false;charge=0;rapidUntil=t+RAPID_MS;rapidShots=0;lastShot=0;rapidHold=true;
@@ -263,21 +263,44 @@ function rapidTick(now){
   if(rapidWas&&!on){rapidHold=false;floats.push({x:J.x+J.w/2,y:J.y+J.h*.4,text:'れんしゃおわり',sub:'',life:1,fast:true})}
   rapidWas=on;
 }
+// the gauge: 10 little chibishizuku sitting on the ribbon, 5 each side of the bow
+let beadT=new Array(CHARGE_N).fill(-9999),beadShown=0,beadPops=[];
+function beadXY(k){const cx=J.x+J.w/2,gap=Math.min(23,(J.w/2-44)/4.4),side=k%2?1:-1,slot=Math.floor(k/2);return {x:cx+side*(41+slot*gap),y:J.y-19.5}}
 function drawRapidGauge(now){
   if(!started)return;
-  const on=now<rapidUntil,cx=J.x+J.w/2,y=J.y-21,w=Math.min(J.w*.62,170),h=9,x=cx-w/2;
-  const k=on?(rapidUntil-now)/RAPID_MS:charge/CHARGE_N;
+  const on=now<rapidUntil,n=on?Math.ceil((rapidUntil-now)/RAPID_MS*CHARGE_N):charge,full=rapidReady||on;
+  if(n>beadShown)for(let k=beadShown;k<n;k++)beadT[k]=now;
+  if(n<beadShown)for(let k=n;k<beadShown;k++){const q=beadXY(k);
+    for(let m=0;m<8;m++){const a=m/8*6.283+Math.random()*.4,v=1.6+Math.random()*1.6;beadPops.push({x:q.x,y:q.y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:1,c:RAINBOW[(k+m)%RAINBOW.length]})}}
+  beadShown=n;
   ctx.save();
-  ctx.globalAlpha=.9;ctx.fillStyle='rgba(255,255,255,.75)';pill(x-2,y-2,w+4,h+4);
-  ctx.globalAlpha=1;ctx.fillStyle='rgba(0,0,0,.08)';pill(x,y,w,h);
-  if(k>0){const g=ctx.createLinearGradient(x,0,x+w,0);
-    if(rapidReady||on){const o=(now/900)%1;RAINBOW.forEach((c,i)=>g.addColorStop(((i/RAINBOW.length)+o)%1,c))}
-    else{g.addColorStop(0,'#9fe3f7');g.addColorStop(1,LV[1].c)}
-    ctx.fillStyle=g;pill(x,y,Math.max(h,w*k),h)}
-  ctx.textAlign='center';ctx.font=`800 11px ${FONT}`;ctx.lineJoin='round';ctx.lineWidth=4;ctx.strokeStyle='#fff';ctx.fillStyle='#5a6b78';
-  const label=on?'れんしゃ中！':rapidReady?'れんしゃOK！':'れんしゃ';
-  if(rapidReady){const sc=1+.08*Math.sin((now-readyT)/120);ctx.translate(cx,y-5);ctx.scale(sc,sc);ctx.translate(-cx,-(y-5));ctx.fillStyle='#ff6f9a'}
-  ctx.strokeText(label,cx,y-5);ctx.fillText(label,cx,y-5);
+  for(let k=0;k<CHARGE_N;k++){const q=beadXY(k),r=9.5;
+    // empty socket
+    ctx.fillStyle='rgba(255,255,255,.55)';ctx.beginPath();ctx.arc(q.x,q.y,r+1.5,0,7);ctx.fill();
+    ctx.strokeStyle='rgba(120,60,80,.18)';ctx.lineWidth=1.5;ctx.stroke();
+    if(k>=n)continue;
+    const dt=now-beadT[k];let sc=dt<500?1+.55*Math.exp(-dt/110)*Math.cos(dt/38):1,y=q.y;
+    let c=LV[1].c;
+    if(full){c=RAINBOW[Math.floor(k+now/140)%RAINBOW.length];y+=Math.sin(now/130+k*.7)*2.2;sc*=1+.06*Math.sin(now/90+k)}
+    ctx.save();ctx.translate(q.x,y);ctx.scale(sc*1.04,sc*.96);
+    if(full){ctx.shadowColor=c;ctx.shadowBlur=10}
+    const g=ctx.createRadialGradient(-3.3,-4,1,0,0,r);g.addColorStop(0,'#ffffff');g.addColorStop(.35,c);g.addColorStop(1,c);
+    ctx.fillStyle=g;ctx.beginPath();ctx.moveTo(0,-r*1.15);ctx.bezierCurveTo(r*.9,-r*.55,r,r*.1,r,r*.25);ctx.arc(0,r*.25,r,0,Math.PI);ctx.bezierCurveTo(-r,r*.1,-r*.9,-r*.55,0,-r*1.15);ctx.fill();
+    ctx.shadowBlur=0;ctx.fillStyle='rgba(40,40,60,.75)';ctx.beginPath();ctx.arc(-3.2,2,1.4,0,7);ctx.arc(3.2,2,1.4,0,7);ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,.9)';ctx.beginPath();ctx.ellipse(-4,-4.3,2.4,1.4,-.6,0,7);ctx.fill();
+    ctx.restore()}
+  // sparkles while full
+  if(full){for(let m=0;m<5;m++){const k=(Math.floor(now/260)+m*3)%CHARGE_N,q=beadXY(k),t=(now/260+m*.37)%1,a=Math.sin(t*Math.PI);
+    const sx=q.x+Math.sin(m*7.1+Math.floor(now/260))*9,sy=q.y-9-t*8,z=2+a*3;
+    ctx.globalAlpha=a;ctx.fillStyle='#fff';ctx.beginPath();ctx.moveTo(sx,sy-z);ctx.lineTo(sx+z*.3,sy-z*.3);ctx.lineTo(sx+z,sy);ctx.lineTo(sx+z*.3,sy+z*.3);ctx.lineTo(sx,sy+z);ctx.lineTo(sx-z*.3,sy+z*.3);ctx.lineTo(sx-z,sy);ctx.lineTo(sx-z*.3,sy-z*.3);ctx.fill()}
+    ctx.globalAlpha=1}
+  for(const b of beadPops){b.x+=b.vx;b.y+=b.vy;b.vy+=.08;b.life-=.045;ctx.globalAlpha=Math.max(0,b.life);ctx.fillStyle=b.c;ctx.beginPath();ctx.arc(b.x,b.y,1.5+b.life*2,0,7);ctx.fill()}
+  ctx.globalAlpha=1;beadPops=beadPops.filter(b=>b.life>0);
+  // label only when it's ready
+  if(rapidReady){const cx=J.x+J.w/2,ty=J.y-46+Math.sin((now-readyT)/160)*2,txt='れんしゃOK！ 押しっぱなし';
+    ctx.textAlign='center';ctx.font=`800 13px ${FONT}`;ctx.lineJoin='round';ctx.lineWidth=5;ctx.strokeStyle=css['--float-edge'];
+    const tw=ctx.measureText(txt).width,g=ctx.createLinearGradient(cx-tw/2,0,cx+tw/2,0),o=(now/1200)%1;
+    RAINBOW.forEach((c,i)=>g.addColorStop(((i/RAINBOW.length)+o)%1,c));ctx.fillStyle=g;ctx.strokeText(txt,cx,ty);ctx.fillText(txt,cx,ty)}
   ctx.restore();
 }
 
@@ -510,7 +533,7 @@ document.getElementById('go').addEventListener('click',()=>{
   audio();if(ac&&ac.state==='suspended')ac.resume();
   started=true;document.getElementById('start').hidden=true;
   [...slimes].forEach(removeSlime);particles=[];floats=[];
-  feverUntil=0;feverWas=false;feverPts=0;bigs=[];confs=[];goos=[];strands=[];rings=[];ghosts=[];charge=0;rapidReady=false;rapidUntil=0;rapidHold=false;rapidWas=false;score=0;$score.textContent='0';combo=0;lastMergeT=0;recPending=false;drops=0;rollNext();
+  feverUntil=0;feverWas=false;feverPts=0;bigs=[];confs=[];goos=[];strands=[];rings=[];ghosts=[];beadShown=0;beadPops=[];charge=0;rapidReady=false;rapidUntil=0;rapidHold=false;rapidWas=false;score=0;$score.textContent='0';combo=0;lastMergeT=0;recPending=false;drops=0;rollNext();
   floats.push({x:J.x+J.w/2,y:J.y+J.h*.42,text:'スタート！',sub:'',life:1,big:true,rainbow:true,fast:true});
   [523,784,1047].forEach((f,i)=>tone('triangle',f,f,f,.22,.16,i*.08));
 });

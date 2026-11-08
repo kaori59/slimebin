@@ -266,6 +266,31 @@ function rapidTick(now){
 // the gauge: 10 little chibishizuku sitting on the ribbon, 5 each side of the bow
 let beadT=new Array(CHARGE_N).fill(-9999),beadShown=0,beadPops=[];
 function beadXY(k){const cx=J.x+J.w/2,gap=Math.min(23,(J.w/2-44)/4.4),side=k%2?1:-1,slot=Math.floor(k/2);return {x:cx+side*(41+slot*gap),y:J.y-19.5}}
+// rapid-fire backdrop: rhythm-game arrows streaming in the drop direction + a glowing hit line
+function drawRapidBg(now){
+  if(now>=rapidUntil)return;
+  const k=Math.max(0,Math.min(1,(now-(rapidUntil-RAPID_MS))/250,(rapidUntil-now)/300)),gs=gsign(),SP=74,lanes=5,off=((now/3.2)%SP)*gs;
+  ctx.save();ctx.lineCap='round';ctx.lineJoin='round';ctx.lineWidth=8;
+  for(let i=0;i<lanes;i++){const x=W*(i+.5)/lanes,ph=(i%2)*SP/2;
+    for(let j=-2;j*SP<H+SP*2;j++){const y=j*SP+ph+off,a=.18+(rapidHold?.14:0);
+      ctx.globalAlpha=a*k;ctx.strokeStyle=RAINBOW[((j%6)+6+i)%6];
+      ctx.beginPath();ctx.moveTo(x-18,y-9*gs);ctx.lineTo(x,y+9*gs);ctx.lineTo(x+18,y-9*gs);ctx.stroke()}}
+  // hit line where the slimes come out
+  const hy=spawnY(1),fl=Math.max(0,1-(now-lastShot)/140),g=ctx.createLinearGradient(J.x,0,J.x+J.w,0),o=(now/700)%1;
+  RAINBOW.forEach((c,i)=>g.addColorStop(((i/RAINBOW.length)+o)%1,c));
+  ctx.globalAlpha=k*(.45+.45*fl);ctx.fillStyle=g;ctx.shadowColor='#fff';ctx.shadowBlur=8+12*fl;pill(J.x+6,hy-3-fl*2,J.w-12,6+fl*4);
+  ctx.restore();
+}
+function drawRapidText(now){
+  if(now>=rapidUntil)return;
+  const txt=rapidHold?'押しつづけろ！':'画面を押して！',cx=J.x+J.w/2,cy=J.y+J.h*.2,sc=rapidHold?1+.07*Math.sin(now/60):1+.12*Math.abs(Math.sin(now/220));
+  ctx.save();ctx.translate(cx,cy);ctx.scale(sc,sc);ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=`800 26px ${FONT}`;ctx.lineJoin='round';
+  const tw=ctx.measureText(txt).width,g=ctx.createLinearGradient(-tw/2,0,tw/2,0),o=(now/500)%1;
+  RAINBOW.forEach((c,i)=>g.addColorStop(((i/RAINBOW.length)+o)%1,c));
+  ctx.lineWidth=7;ctx.strokeStyle=css['--float-edge'];ctx.strokeText(txt,0,0);ctx.fillStyle=g;ctx.fillText(txt,0,0);
+  ctx.font=`800 13px ${FONT}`;ctx.lineWidth=4;ctx.fillStyle=css['--float'];const left=`のこり ${Math.ceil((rapidUntil-now)/1000)}びょう`;ctx.strokeText(left,0,24);ctx.fillText(left,0,24);
+  ctx.restore();
+}
 function drawRapidGauge(now){
   if(!started)return;
   const on=now<rapidUntil,n=on?Math.ceil((rapidUntil-now)/RAPID_MS*CHARGE_N):charge,full=rapidReady||on;
@@ -695,6 +720,7 @@ function frame(now){
   {const g=ctx.createLinearGradient(0,J.y,0,J.y+J.h);g.addColorStop(0,css['--glass']);g.addColorStop(1,css['--glass-tint']);ctx.fillStyle=g;rr(J.x-6,J.y-2,J.w+12,J.h+8,46);ctx.fill();
     if(now<feverUntil){const fg=ctx.createLinearGradient(J.x,J.y,J.x+J.w,J.y+J.h),o=(now/1500)%1;
       RAINBOW.forEach((c,i)=>fg.addColorStop(((i/RAINBOW.length)+o)%1,c));ctx.globalAlpha=.16+.06*Math.sin(now/180);ctx.fillStyle=fg;rr(J.x-6,J.y-2,J.w+12,J.h+8,46);ctx.fill();ctx.globalAlpha=1}}
+  drawRapidBg(now);
   // drop guide + preview
   if(aimX!==null&&!grab&&!rapidOn()){const r=R(nextLv),x=Math.max(J.x+r,Math.min(J.x+J.w-r,aimX)),y=spawnY(nextLv);
     ctx.save();ctx.setLineDash([3,7]);ctx.strokeStyle=css['--ink-soft'];ctx.globalAlpha=.35;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x,gsign()>0?J.y+J.h:J.y);ctx.stroke();ctx.restore();
@@ -734,6 +760,7 @@ function frame(now){
   ctx.globalAlpha=1;confs=confs.filter(q=>q.life>0&&q.y>-30&&q.y<H+30);
   ctx.restore();
   if(flashA>.01){ctx.fillStyle=`rgba(255,255,255,${flashA})`;ctx.fillRect(0,0,W,H);flashA*=.88}
+  drawRapidText(now);
   if(now<feverUntil){const left=Math.ceil((feverUntil-now)/1000);ctx.textAlign='center';ctx.font=`800 17px ${FONT}`;ctx.lineWidth=5;ctx.lineJoin='round';
     const tx=J.x+J.w/2,ty=J.y+24,tw=ctx.measureText('フィーバー 00').width,g=ctx.createLinearGradient(tx-tw/2,0,tx+tw/2,0);
     ['#ff5b6b','#ff9f2e','#e8b800','#3cba5c','#2f8cff','#9b5cf0'].forEach((c,i,a)=>g.addColorStop(i/(a.length-1),c));

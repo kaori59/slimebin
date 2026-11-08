@@ -397,12 +397,12 @@ function startFever(x,y){
   flash(.55);shake(260,6);confetti(x,y,40,9);
   floats.push({x:J.x+J.w/2,y:J.y+J.h*.34,text:'フィーバータイム！',sub:`12秒 点数×${FEVER_MULT}`,life:1,big:true,rainbow:true});
   [523,659,784,1047,1319,1568].forEach((f,i)=>tone('triangle',f,f,f*.98,.3,.16,i*.06));tone('sine',1047,1568,2093,.6,.1,.4);
-  bigs.push(makeBig(48,now+250,20));nextBig=now+4300;
+  bigs.push(makeBig(48,now+250,20));nextBig=now+1600;bigN=0;
   rollNext();slimes.forEach(s=>s.plugin.amp=Math.min(.32,s.plugin.amp+.2));
   try{navigator.vibrate&&navigator.vibrate([40,40,40,40,120])}catch(e){}
 }
 /* fever party pieces */
-let bigs=[],nextBig=0,shakeUntil=0,shakeAmp=0,flashA=0,confs=[];
+let bigs=[],nextBig=0,bigN=0,shakeUntil=0,shakeAmp=0,flashA=0,confs=[];
 const flash=a=>{flashA=Math.max(flashA,a)};
 const shake=(ms,a)=>{shakeUntil=performance.now()+ms;shakeAmp=a};
 // dreamy soap bubbles instead of paper confetti
@@ -424,19 +424,19 @@ function sWet(f0,f1,dur,vol,delay){
   const g=ac.createGain();g.gain.setValueAtTime(.0001,n);g.gain.exponentialRampToValueAtTime(vol,n+.015);g.gain.exponentialRampToValueAtTime(.0001,n+dur);
   s.connect(f).connect(g).connect(out);s.start(n)}
 function sBloop(delay,vol){const f=280+Math.random()*380;tone('sine',f,f*1.9,f*2.6,.09,vol||.13,delay)}
-function makeBig(n,t0,real){
+function makeBig(n,t0,real,sc,fx){
   // lots of little chibishizuku packed inside, spread like seeds in a sunflower.
   // only `real` of them stay as slimes; the rest pop into bubbles mid-air, so a fever never piles up enough for another fever
   const kids=[];for(let i=0;i<n;i++){const a=i*2.39996,d=Math.sqrt((i+.5)/n)*.8;kids.push({a,d,ph:Math.random()*6,real:false})}
   const step=n/real;for(let j=0;j<real;j++)kids[Math.floor(j*step)].real=true;
-  return {t0,n,real,kids,fired:false,landed:false,swell:false,p:{r:0,amp:.05,ph:Math.random()*6}}}
+  return {t0,n,real,kids,sc:sc||1,fx:fx||.5,fired:false,landed:false,swell:false,p:{r:0,amp:.05,ph:Math.random()*6}}}
 // a giant see-through rainbow jelly, full of chibishizuku, drops in, wobbles, swells and splits open
 function bigPose(sp,now){
-  const e=(now-sp.t0)/1000,r=J.w*.29,top=gsign()>0,ty=top?J.y+J.h*.42:J.y+J.h*.58,sy=top?J.y-r*2.6:J.y+J.h+r*2.6;
+  const e=(now-sp.t0)/1000,r=J.w*.29*sp.sc,top=gsign()>0,ty=top?J.y+J.h*.42:J.y+J.h*.58,sy=top?J.y-r*2.6:J.y+J.h+r*2.6;
   let y=ty,st=null,rr=r;
   if(e<.5){const k=Math.max(0,e)/.5;y=sy+(ty-sy)*k*k;st={a:Math.PI/2,s:.14*k}}
   else{const d=e-.5;st={a:Math.PI/2,s:-.26*Math.exp(-d*4.5)*Math.cos(d*19)};if(e>.95)rr=r*(1+(e-.95)*1.4)}
-  return {e,x:J.x+J.w/2,y,r:rr,st}}
+  return {e,x:J.x+J.w*sp.fx,y,r:rr,st}}
 function kidPos(sp,P,k,now){const d=k.d*P.r,a=k.a+Math.sin(now/700+k.ph)*.08;return {x:P.x+Math.cos(a)*d+Math.sin(now/260+k.ph)*2,y:P.y+Math.sin(a)*d*.94+Math.cos(now/310+k.ph)*2}}
 function burstBig(sp,P,now){
   sp.fired=true;let room=Math.max(0,70-slimes.length);
@@ -448,9 +448,9 @@ function burstBig(sp,P,now){
   for(let i=0;i<22;i++){const a=i/22*6.283+Math.random()*.25,v=5+Math.random()*7;
     goos.push({x:P.x+Math.cos(a)*P.r*.85,y:P.y+Math.sin(a)*P.r*.85,vx:Math.cos(a)*v,vy:Math.sin(a)*v-2*gsign(),r:5+Math.random()*9,c:RAINBOW[i%RAINBOW.length],stuck:false,drip:0,life:1})}
   rings.push({x:P.x,y:P.y,r:P.r,t0:now});
-  burst(P.x,P.y,LV[1].c,24,P.r*.7);confetti(P.x,P.y,26,7);flash(.35);shake(380,8);
+  const k=sp.sc;burst(P.x,P.y,LV[1].c,Math.round(24*k),P.r*.7);confetti(P.x,P.y,Math.round(26*k),7);flash(.35*k*k);shake(380,8*k);
   sWet(1700,180,.42,.55);sSquish(210,55,.45,.5,17);sWet(500,1400,.18,.2,.08);
-  for(let i=0;i<14;i++)sBloop(.06+i*.035+Math.random()*.03,.1);
+  for(let i=0;i<Math.round(14*k);i++)sBloop(.06+i*.035+Math.random()*.03,.1);
   floats.push({x:P.x,y:P.y-P.r*.4,text:'ぷるんっ！',sub:'ちびしずく いっぱい！',life:1,big:true,rainbow:true,fast:true});
   try{navigator.vibrate&&navigator.vibrate([40,20,70])}catch(e){}
 }
@@ -559,11 +559,11 @@ const BGM=(()=>{
 let feverWas=false,lastBub=0,bubLane=0;
 function feverTick(now){
   const on=now<feverUntil;
-  if(on&&now>=nextBig&&feverUntil-now>1800&&!bigs.length){bigs.push(makeBig(30,now,10));nextBig=now+4300}
+  if(on&&now>=nextBig&&feverUntil-now>1800&&!bigs.length){bigs.push(makeBig(26,now,3,.74,[.3,.7,.5][bigN++%3]));nextBig=now+1400}
   if(on&&now-lastBub>=200){lastBub=now;bubLane=(bubLane+2)%5;const bx=J.x+J.w*(.1+.8*(bubLane+Math.random()*.6)/5.6);
     confs.push({x:bx,y:gsign()>0?J.y+J.h-6:J.y+6,vx:0,vy:-(1.3+Math.random()*.6)*gsign(),r:7+Math.random()*6,ph:Math.random()*6,life:1.4});sBloop(0,.035)}
   if(on&&Math.random()<.06)confs.push({x:J.x+Math.random()*J.w,y:gsign()>0?J.y+J.h-6:J.y+6,vx:0,vy:-(0.6+Math.random()*.9)*gsign(),r:3+Math.random()*8,ph:Math.random()*6,life:1.4});
-  if(on&&now-lastRain>700&&slimes.length<56){lastRain=now;
+  if(on&&now-lastRain>900&&slimes.length<56){lastRain=now;
     const l=1,b=addSlime(l,J.x+R(l)+Math.random()*(J.w-2*R(l)),spawnY(l));Body.setVelocity(b,{x:(Math.random()-.5)*2,y:2*gsign()});
     if(Math.random()<.4)tone('sine',900+Math.random()*500,1200,700,.08,.05)}
   if(feverWas&&!on){floats.push({x:J.x+J.w/2,y:J.y+J.h*.4,text:'フィーバー終わり！',sub:`フィーバーで +${feverPts.toLocaleString()}`,life:1,big:true,rainbow:true});

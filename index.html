@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#182027" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="スライムびん">
+<meta name="apple-mobile-web-app-title" content="スライムうちまくれ！">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
@@ -19,7 +19,7 @@ body{margin:0;font:14px/1.5 system-ui,sans-serif;overscroll-behavior:none}
 img{max-width:100%}
 [hidden]{display:none!important}
 </style>
-<title>ぷるぷるスライムびん</title>
+<title>スライムうちまくれ！</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;800&display=swap">
@@ -105,7 +105,7 @@ footer{display:flex;justify-content:center;gap:10px;padding-block:6px calc(12px 
 </head>
 <body>
 <header class="pad">
-  <div class="left"><h1>ぷるぷるスライムびん</h1><span class="score">てんすう<b id="score">0</b></span></div>
+  <div class="left"><h1>スライムうちまくれ！</h1><span class="score">てんすう<b id="score">0</b></span></div>
   <div class="info">
     <span>つぎ <b id="next">ちびしずく</b></span>
     <span>ハイスコア <b id="hi">0</b></span>
@@ -118,7 +118,7 @@ footer{display:flex;justify-content:center;gap:10px;padding-block:6px calc(12px 
 <div id="stage"><canvas id="c"></canvas><div class="toast" id="toast"></div>
   <div class="start" id="start"><div class="card">
     <p>同じスライムをくっつけて育てよう</p>
-    <h2>ぷるぷるスライムびん</h2>
+    <h2>スライムうちまくれ！</h2>
     <p>めざせ 虹色のレインボーパール<br>虹どうしをくっつけると <b>フィーバー！</b><br>10回落とすと <b>れんしゃ</b>できる</p>
     <button class="toy go" id="go" type="button">スタート！</button>
     <p>ハイスコア <b id="startHi">0</b>　最高れんさ <b id="startMc">0</b></p>
@@ -272,7 +272,7 @@ function drawRapidBg(now){
   const k=Math.max(0,Math.min(1,(now-(rapidUntil-RAPID_MS))/250,(rapidUntil-now)/300)),gs=gsign(),SP=74,lanes=5,off=((now/3.2)%SP)*gs;
   ctx.save();ctx.lineCap='round';ctx.lineJoin='round';ctx.lineWidth=8;
   for(let i=0;i<lanes;i++){const x=W*(i+.5)/lanes,ph=(i%2)*SP/2;
-    for(let j=-2;j*SP<H+SP*2;j++){const y=j*SP+ph+off,a=.18+(rapidHold?.14:0);
+    for(let j=-2;j*SP<H+SP*2;j++){const y=j*SP+ph+off,a=.08+(rapidHold?.06:0);
       ctx.globalAlpha=a*k;ctx.strokeStyle=RAINBOW[((j%6)+6+i)%6];
       ctx.beginPath();ctx.moveTo(x-18,y-9*gs);ctx.lineTo(x,y+9*gs);ctx.lineTo(x+18,y-9*gs);ctx.stroke()}}
   // hit line where the slimes come out

@@ -105,12 +105,12 @@ footer{display:flex;justify-content:center;gap:10px;padding-block:6px calc(12px 
 </head>
 <body>
 <header class="pad">
-  <div class="left"><h1>スライムうちまくれ！</h1><span class="score">てんすう<b id="score">0</b></span></div>
+  <div class="left"><h1>スライムうちまくれ！</h1><span class="score">点数<b id="score">0</b></span></div>
   <div class="info">
-    <span>つぎ <b id="next">ちびしずく</b></span>
+    <span>次 <b id="next">ちびしずく</b></span>
     <span>ハイスコア <b id="hi">0</b></span>
-    <span>最高れんさ <b id="mc">0</b></span>
-    <span>さいこう <b id="best">—</b></span>
+    <span>最高連鎖 <b id="mc">0</b></span>
+    <span>最高進化 <b id="best">—</b></span>
     <span>虹 <b id="rain">0</b></span>
     <button id="mute" type="button">音 あり</button>
   </div>
@@ -119,14 +119,14 @@ footer{display:flex;justify-content:center;gap:10px;padding-block:6px calc(12px 
   <div class="start" id="start"><div class="card">
     <p>同じスライムをくっつけて育てよう</p>
     <h2>スライムうちまくれ！</h2>
-    <p>めざせ 虹色のレインボーパール<br>虹どうしをくっつけると <b>フィーバー！</b><br>10回落とすと <b>れんしゃ</b>できる</p>
+    <p>目指せ 虹色のレインボーパール<br>虹どうしをくっつけると <b>フィーバー！</b><br>10回落とすと <b>連射</b>できる</p>
     <button class="toy go" id="go" type="button">スタート！</button>
-    <p>ハイスコア <b id="startHi">0</b>　最高れんさ <b id="startMc">0</b></p>
+    <p>ハイスコア <b id="startHi">0</b>　最高連鎖 <b id="startMc">0</b></p>
   </div></div>
 </div>
-<div class="ladder pad" id="ladder" aria-label="進化のながれ"></div>
+<div class="ladder pad" id="ladder" aria-label="進化の流れ"></div>
 <footer class="pad">
-  <button class="toy" id="storm" type="button"><span aria-hidden="true">🌪️</span>じぇりー台風</button>
+  <button class="toy" id="storm" type="button"><span aria-hidden="true">🌪️</span>ゼリー台風</button>
   <button class="toy" id="flip" type="button" aria-pressed="false"><span aria-hidden="true">🙃</span>重力反転</button></footer>
 
 <script>
@@ -154,7 +154,7 @@ const $score=document.getElementById('score'),$hi=document.getElementById('hi');
 let score=0,combo=0,lastMergeT=0,recPending=false;
 // a new best chain is celebrated once, after the chain has finished
 function celebrateRecord(n){
-  floats.push({x:J.x+J.w/2,y:J.y+J.h*.3,text:'最高れんさ 更新！',sub:`${n}れんさ`,life:1,big:true,rainbow:true});
+  floats.push({x:J.x+J.w/2,y:J.y+J.h*.3,text:'最高連鎖 更新！',sub:`${n}連鎖`,life:1,big:true,rainbow:true});
   ['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#c58cf0'].forEach((c,i)=>setTimeout(()=>burst(J.x+J.w*(.2+.15*i),J.y+J.h*.3,c,14,20),i*70));
   [659,784,988,1319].forEach((f,i)=>tone('triangle',f,f,f*.99,.28,.16,i*.07));tone('sine',1319,1760,1568,.5,.1,.3);
   const mc=document.getElementById('mc');mc.classList.add('bump');setTimeout(()=>mc.classList.remove('bump'),700);
@@ -166,11 +166,11 @@ function showRec(){$hi.textContent=rec.hi.toLocaleString();document.getElementBy
   [...ladder.children].forEach((d,i)=>d.classList.toggle('got',i+1<=rec.best))}
 showRec();
 
-const YAY=['やったね！ ずっと触ってた甲斐があったね','きらきら！ きょういちばんの瞬間かも','すごい！ びんの中に虹がかかったよ',
+const YAY=['やったね！ ずっと触ってた甲斐があったね','きらきら！ 今日いちばんの瞬間かも','すごい！ びんの中に虹がかかったよ',
   'おめでとう！ ちびしずくがここまで育ったよ','ぷるぷるの頂点に到達！','なんて綺麗…ちょっと見とれちゃうね'];
 function celebrate(n){
-  const msg=n===1?'はじめての虹！ ほんとうにおめでとう！':YAY[Math.floor(Math.random()*YAY.length)];
-  floats.push({x:J.x+J.w/2,y:J.y+J.h*.32,text:msg,sub:`★ レインボーパール誕生 ★ ${n}こ目`,life:1,big:true,rainbow:true});
+  const msg=n===1?'初めての虹！ 本当におめでとう！':YAY[Math.floor(Math.random()*YAY.length)];
+  floats.push({x:J.x+J.w/2,y:J.y+J.h*.32,text:msg,sub:`★ レインボーパール誕生 ★ ${n}個目`,life:1,big:true,rainbow:true});
   try{navigator.vibrate&&navigator.vibrate([30,60,30,60,80])}catch(e){}
 }
 let toastT;function toast(msg){toastEl.textContent=msg;toastEl.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>toastEl.classList.remove('show'),1900)}
@@ -252,7 +252,7 @@ function drop(x){
     [660,880,1175].forEach((f,i)=>tone('triangle',f,f,f,.14,.12,i*.06))}
 }
 function startRapid(){const t=performance.now();rapidReady=false;charge=0;rapidUntil=t+RAPID_MS;rapidShots=0;lastShot=0;rapidHold=true;
-  floats.push({x:J.x+J.w/2,y:J.y+J.h*.4,text:'れんしゃ！',sub:'',life:1,big:true,rainbow:true,fast:true});
+  floats.push({x:J.x+J.w/2,y:J.y+J.h*.4,text:'連射！',sub:'',life:1,big:true,rainbow:true,fast:true});
   [523,659,784,1047].forEach((f,i)=>tone('square',f,f,f,.07,.06,i*.04))}
 function rapidTick(now){
   if(fever()&&now<rapidUntil)rapidUntil=0;
@@ -260,7 +260,7 @@ function rapidTick(now){
   if(on&&rapidHold&&aimX!==null&&now-lastShot>=RAPID_GAP&&rapidShots<RAPID_MAX&&slimes.length<80){lastShot=now;rapidShots++;
     const l=Math.random()<.8?1:2,x=Math.max(J.x+R(l),Math.min(J.x+J.w-R(l),aimX+(Math.random()-.5)*R(l)*2));
     const b=addSlime(l,x,spawnY(l));Body.setVelocity(b,{x:(Math.random()-.5)*1.6,y:5*gsign()});b.plugin.amp=.3;sBloop(0,.06)}
-  if(rapidWas&&!on){rapidHold=false;floats.push({x:J.x+J.w/2,y:J.y+J.h*.4,text:'れんしゃおわり',sub:'',life:1,fast:true})}
+  if(rapidWas&&!on){rapidHold=false;floats.push({x:J.x+J.w/2,y:J.y+J.h*.4,text:'連射終わり',sub:'',life:1,fast:true})}
   rapidWas=on;
 }
 // the gauge: 10 little chibishizuku sitting on the ribbon, 5 each side of the bow
@@ -283,12 +283,12 @@ function drawRapidBg(now){
 }
 function drawRapidText(now){
   if(now>=rapidUntil)return;
-  const txt=rapidHold?'押しつづけろ！':'画面を押して！',cx=J.x+J.w/2,cy=J.y+J.h*.2,sc=rapidHold?1+.07*Math.sin(now/60):1+.12*Math.abs(Math.sin(now/220));
+  const txt=rapidHold?'押し続けろ！':'画面を押して！',cx=J.x+J.w/2,cy=J.y+J.h*.2,sc=rapidHold?1+.07*Math.sin(now/60):1+.12*Math.abs(Math.sin(now/220));
   ctx.save();ctx.translate(cx,cy);ctx.scale(sc,sc);ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=`800 26px ${FONT}`;ctx.lineJoin='round';
   const tw=ctx.measureText(txt).width,g=ctx.createLinearGradient(-tw/2,0,tw/2,0),o=(now/500)%1;
   RAINBOW.forEach((c,i)=>g.addColorStop(((i/RAINBOW.length)+o)%1,c));
   ctx.lineWidth=7;ctx.strokeStyle=css['--float-edge'];ctx.strokeText(txt,0,0);ctx.fillStyle=g;ctx.fillText(txt,0,0);
-  ctx.font=`800 13px ${FONT}`;ctx.lineWidth=4;ctx.fillStyle=css['--float'];const left=`のこり ${Math.ceil((rapidUntil-now)/1000)}びょう`;ctx.strokeText(left,0,24);ctx.fillText(left,0,24);
+  ctx.font=`800 13px ${FONT}`;ctx.lineWidth=4;ctx.fillStyle=css['--float'];const left=`残り ${Math.ceil((rapidUntil-now)/1000)}秒`;ctx.strokeText(left,0,24);ctx.fillText(left,0,24);
   ctx.restore();
 }
 function drawRapidGauge(now){
@@ -322,7 +322,7 @@ function drawRapidGauge(now){
   for(const b of beadPops){b.x+=b.vx;b.y+=b.vy;b.vy+=.08;b.life-=.045;ctx.globalAlpha=Math.max(0,b.life);ctx.fillStyle=b.c;ctx.beginPath();ctx.arc(b.x,b.y,1.5+b.life*2,0,7);ctx.fill()}
   ctx.globalAlpha=1;beadPops=beadPops.filter(b=>b.life>0);
   // label only when it's ready
-  if(rapidReady){const cx=J.x+J.w/2,ty=J.y-46+Math.sin((now-readyT)/160)*2,txt='れんしゃOK！ 押しっぱなし';
+  if(rapidReady){const cx=J.x+J.w/2,ty=J.y-46+Math.sin((now-readyT)/160)*2,txt='連射OK！ 押しっぱなし';
     ctx.textAlign='center';ctx.font=`800 13px ${FONT}`;ctx.lineJoin='round';ctx.lineWidth=5;ctx.strokeStyle=css['--float-edge'];
     const tw=ctx.measureText(txt).width,g=ctx.createLinearGradient(cx-tw/2,0,cx+tw/2,0),o=(now/1200)%1;
     RAINBOW.forEach((c,i)=>g.addColorStop(((i/RAINBOW.length)+o)%1,c));ctx.fillStyle=g;ctx.strokeText(txt,cx,ty);ctx.fillText(txt,cx,ty)}
@@ -363,7 +363,7 @@ Events.on(engine,'afterUpdate',()=>{
     combo=now-lastMergeT<1300?combo+1:1;lastMergeT=now;
     if(combo>=2&&combo>(rec.maxCombo||0)){rec.maxCombo=combo;saveRec();showRec();recPending=true}
     let pts=l*(l+1)*5,mult=1+Math.min(combo-1,fever()?6:999)*.5,tags=[];
-    if(combo>=2)tags.push(`${combo}れんさ`);
+    if(combo>=2)tags.push(`${combo}連鎖`);
     if(shot){mult*=2;tags.push('ナイスショット')}
     if(isWild)tags.push('ふしぎ');
     if(l===MAX)pts+=1000;
@@ -371,7 +371,7 @@ Events.on(engine,'afterUpdate',()=>{
     pts=Math.round(pts*mult);addScore(pts);if(fever())feverPts+=pts;
     floats.push({x,y:y-R(l)*.6,text:`+${pts}`,sub:tags.join(' '),life:1,big:combo>=3&&!fever()||shot||l>=5});
     if(combo>=3)tone('triangle',600+combo*120,900+combo*150,800+combo*120,.18,.1,.05);
-    if(l>rec.best){rec.best=l;saveRec();showRec();if(l<MAX&&l>=4)toast(`はじめての ${LV[l].n}！`)}
+    if(l>rec.best){rec.best=l;saveRec();showRec();if(l<MAX&&l>=4)toast(`初めての ${LV[l].n}！`)}
     if(l===MAX){rec.rainbows++;saveRec();showRec();celebrate(rec.rainbows);sRainbow();
       for(let i=0;i<5;i++)setTimeout(()=>burst(x,y,['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#c58cf0'][i],14,R(MAX)*1.2),i*90);
       // a rainbow made during a fever pops right away, so no pair is left to restart the fever
@@ -395,7 +395,7 @@ function startFever(x,y){
   addScore(2000);
   RAINBOW.forEach((c,i)=>setTimeout(()=>burst(x,y,c,18,R(MAX)*1.3),i*70));
   flash(.55);shake(260,6);confetti(x,y,40,9);
-  floats.push({x:J.x+J.w/2,y:J.y+J.h*.34,text:'フィーバータイム！',sub:`12びょう 点数×${FEVER_MULT}`,life:1,big:true,rainbow:true});
+  floats.push({x:J.x+J.w/2,y:J.y+J.h*.34,text:'フィーバータイム！',sub:`12秒 点数×${FEVER_MULT}`,life:1,big:true,rainbow:true});
   [523,659,784,1047,1319,1568].forEach((f,i)=>tone('triangle',f,f,f*.98,.3,.16,i*.06));tone('sine',1047,1568,2093,.6,.1,.4);
   bigs.push(makeBig(48,now+250,20));nextBig=now+4300;
   rollNext();slimes.forEach(s=>s.plugin.amp=Math.min(.32,s.plugin.amp+.2));
@@ -556,15 +556,17 @@ const BGM=(()=>{
   setInterval(tick,25);
   return {tick,get playing(){return playing}};
 })();
-let feverWas=false;
+let feverWas=false,lastBub=0,bubLane=0;
 function feverTick(now){
   const on=now<feverUntil;
   if(on&&now>=nextBig&&feverUntil-now>1800&&!bigs.length){bigs.push(makeBig(30,now,10));nextBig=now+4300}
-  if(on&&Math.random()<.18)confs.push({x:J.x+Math.random()*J.w,y:gsign()>0?J.y+J.h-6:J.y+6,vx:0,vy:-(0.6+Math.random()*.9)*gsign(),r:3+Math.random()*8,ph:Math.random()*6,life:1.4});
+  if(on&&now-lastBub>=200){lastBub=now;bubLane=(bubLane+2)%5;const bx=J.x+J.w*(.1+.8*(bubLane+Math.random()*.6)/5.6);
+    confs.push({x:bx,y:gsign()>0?J.y+J.h-6:J.y+6,vx:0,vy:-(1.3+Math.random()*.6)*gsign(),r:7+Math.random()*6,ph:Math.random()*6,life:1.4});sBloop(0,.035)}
+  if(on&&Math.random()<.06)confs.push({x:J.x+Math.random()*J.w,y:gsign()>0?J.y+J.h-6:J.y+6,vx:0,vy:-(0.6+Math.random()*.9)*gsign(),r:3+Math.random()*8,ph:Math.random()*6,life:1.4});
   if(on&&now-lastRain>700&&slimes.length<56){lastRain=now;
     const l=1,b=addSlime(l,J.x+R(l)+Math.random()*(J.w-2*R(l)),spawnY(l));Body.setVelocity(b,{x:(Math.random()-.5)*2,y:2*gsign()});
     if(Math.random()<.4)tone('sine',900+Math.random()*500,1200,700,.08,.05)}
-  if(feverWas&&!on){floats.push({x:J.x+J.w/2,y:J.y+J.h*.4,text:'フィーバーおわり！',sub:`フィーバーで +${feverPts.toLocaleString()}`,life:1,big:true,rainbow:true});
+  if(feverWas&&!on){floats.push({x:J.x+J.w/2,y:J.y+J.h*.4,text:'フィーバー終わり！',sub:`フィーバーで +${feverPts.toLocaleString()}`,life:1,big:true,rainbow:true});
     [1047,784,659,523].forEach((f,i)=>tone('triangle',f,f,f,.2,.12,i*.08));rollNext()}
   feverWas=on;
 }

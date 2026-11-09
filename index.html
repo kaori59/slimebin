@@ -81,6 +81,13 @@ header{display:flex;flex-direction:column;gap:7px;padding-block:9px 2px;max-widt
 @media (max-width:520px){.wide{display:none}}
 @media (prefers-reduced-motion:reduce){.logo .l3{animation:none}}
 #stage{flex:1;position:relative;min-height:0;touch-action:none}
+#end{position:absolute;right:8px;top:8px;z-index:1;font:inherit;font-size:.66rem;font-weight:800;color:var(--ink-soft);background:var(--btn);border:1.5px solid var(--btn-edge);border-bottom-width:3px;border-radius:99px;padding:4px 10px;cursor:pointer}
+#end:focus-visible{outline:3px solid var(--ink-soft);outline-offset:2px}
+.start .row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.start .row .toy{font-size:1rem;padding:10px 18px}
+.start .sub{background:var(--btn)}
+.start .final{font-size:2.6rem;font-weight:800;line-height:1.1;color:#ff5d97;font-variant-numeric:tabular-nums;text-shadow:0 3px 0 rgba(224,81,138,.25)}
+.start .newhi{font-size:.8rem;font-weight:800;color:#fff;background:linear-gradient(90deg,#ff6b6b,#ffb12e,#4dc56a,#4d96ff,#a77cf0);border-radius:99px;padding:3px 12px}
 canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 .toast{position:absolute;left:50%;top:14%;transform:translate(-50%,0) scale(.9);background:var(--btn);color:var(--ink);border:2px solid var(--btn-edge);
   border-radius:99px;padding:6px 16px;font-weight:800;font-size:.95rem;white-space:nowrap;opacity:0;transition:opacity .3s,transform .3s;pointer-events:none}
@@ -147,6 +154,18 @@ footer{display:flex;justify-content:center;gap:10px;padding-block:6px calc(12px 
     <button class="toy go" id="go" type="button">スタート！</button>
     <p>ハイスコア <b id="startHi">0</b>　最高連鎖 <b id="startMc">0</b></p>
   </div></div>
+  <button id="end" type="button" hidden>おわり</button>
+  <div class="start" id="quit" hidden><div class="card" role="dialog" aria-labelledby="quitQ">
+    <h2 id="quitQ">本当に終わりにする？</h2>
+    <div class="row"><button class="toy go" id="quitYes" type="button">終わりにする</button><button class="toy sub" id="quitNo" type="button">つづける</button></div>
+  </div></div>
+  <div class="start" id="result" hidden><div class="card" role="dialog" aria-labelledby="resT">
+    <h2 id="resT">おしまい！</h2>
+    <p>今回のスコア</p>
+    <div class="final" id="final">0</div>
+    <span class="newhi" id="newhi" hidden>ハイスコア更新！</span>
+    <button class="toy go" id="again" type="button">もういちど</button>
+  </div></div>
 </div>
 <div class="ladder pad" id="ladder" aria-label="進化の流れ"></div>
 <footer class="pad">
@@ -188,7 +207,7 @@ function celebrateRecord(n){
   const mc=document.getElementById('mc');mc.classList.add('bump');setTimeout(()=>mc.classList.remove('bump'),700);
   try{navigator.vibrate&&navigator.vibrate([20,40,20,40,50])}catch(e){}
 }
-function addScore(n){score+=n;$score.textContent=score.toLocaleString();$score.parentNode.classList.toggle('long',score>=1e6);$score.classList.add('bump');setTimeout(()=>$score.classList.remove('bump'),120);
+function addScore(n){if(!started)return;score+=n;$score.textContent=score.toLocaleString();$score.parentNode.classList.toggle('long',score>=1e6);$score.classList.add('bump');setTimeout(()=>$score.classList.remove('bump'),120);
   if(score>rec.hi){rec.hi=score;saveRec()}$hi.textContent=rec.hi.toLocaleString()}
 function showRec(){$hi.textContent=rec.hi.toLocaleString();document.getElementById('mc').textContent=rec.maxCombo||0;$best.textContent=rec.best?LV[rec.best].n:'—';setMini($bestIco,rec.best||0);$rain.textContent=rec.rainbows;muteBtn.textContent=rec.muted?'音 なし':'音 あり';
   [...ladder.children].forEach((d,i)=>d.classList.toggle('got',i+1<=rec.best))}
@@ -360,6 +379,7 @@ function drawRapidGauge(now){
 /* ---------- merging ---------- */
 const queue=[];
 function onPairs(e){
+  if(!started)return; // after おわり the jar is frozen in time: no more merges or points
   for(const p of e.pairs){
     const a=p.bodyA,b=p.bodyB;if(a.label!=='slime'||b.label!=='slime')continue;
     if(e.name==='collisionStart'){const rv=Math.hypot(a.velocity.x-b.velocity.x,a.velocity.y-b.velocity.y);
@@ -657,17 +677,30 @@ document.getElementById('stormPop').addEventListener('click',()=>{startStorm('po
 document.getElementById('stormCorn').addEventListener('click',()=>{startStorm('corn',2600);lastCorn=0});
 flipBtn.addEventListener('click',()=>{audio();engine.gravity.y*=-1;flipBtn.setAttribute('aria-pressed',String(engine.gravity.y<0));tone('sine',300,500,700,.3,.15);dangerT=0});
 // start screen
-let started=false;
+let started=false,hiAtStart=0;
+const $start=document.getElementById('start'),$end=document.getElementById('end'),$quit=document.getElementById('quit'),$result=document.getElementById('result');
 document.getElementById('startHi').textContent=rec.hi.toLocaleString();document.getElementById('startMc').textContent=rec.maxCombo||0;
 document.getElementById('go').addEventListener('click',()=>{
   audio();if(ac&&ac.state==='suspended')ac.resume();
-  started=true;document.getElementById('start').hidden=true;
+  started=true;$start.hidden=true;$end.hidden=false;hiAtStart=rec.hi;
   [...slimes].forEach(removeSlime);particles=[];floats=[];
   feverUntil=0;feverWas=false;feverPts=0;bigs=[];confs=[];goos=[];strands=[];rings=[];ghosts=[];beadShown=0;beadPops=[];charge=0;rapidReady=false;rapidUntil=0;rapidHold=false;rapidWas=false;score=0;$score.textContent='0';$score.parentNode.classList.remove('long');combo=0;lastMergeT=0;recPending=false;drops=0;rollNext();
   floats.push({x:J.x+J.w/2,y:J.y+J.h*.42,text:'スタート！',sub:'',life:1,big:true,rainbow:true,fast:true});
   [523,784,1047].forEach((f,i)=>tone('triangle',f,f,f,.22,.16,i*.08));
 });
 muteBtn.addEventListener('click',()=>{rec.muted=!rec.muted;saveRec();showRec()});
+// end button: ask once, then show this round's score
+[$end,$quit,$result].forEach(el=>el.addEventListener('pointerdown',e=>e.stopPropagation()));
+$end.addEventListener('click',()=>{if(!started)return;grab=null;press=null;rapidHold=false;$quit.hidden=false;document.getElementById('quitNo').focus()});
+document.getElementById('quitNo').addEventListener('click',()=>{$quit.hidden=true});
+document.getElementById('quitYes').addEventListener('click',()=>{
+  $quit.hidden=true;started=false;$end.hidden=true;feverUntil=0;bigs=[];rapidUntil=0;rapidReady=false;rapidHold=false;
+  document.getElementById('final').textContent=score.toLocaleString();
+  document.getElementById('newhi').hidden=!(score>0&&score>hiAtStart);
+  $result.hidden=false;[784,659,523,784].forEach((f,i)=>tone('triangle',f,f,f,.25,.14,i*.12));
+  document.getElementById('again').focus()});
+document.getElementById('again').addEventListener('click',()=>{
+  $result.hidden=true;document.getElementById('startHi').textContent=rec.hi.toLocaleString();document.getElementById('startMc').textContent=rec.maxCombo||0;$start.hidden=false});
 
 /* ---------- touch: tap empty space to drop, hold a slime and pull to fling ---------- */
 let grab=null,press=null;const ptr={x:0,y:0};

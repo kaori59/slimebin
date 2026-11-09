@@ -100,6 +100,7 @@ footer{display:flex;justify-content:center;gap:10px;padding-block:6px calc(12px 
 .toy:focus-visible,#mute:focus-visible{outline:3px solid var(--ink-soft);outline-offset:2px}
 .toy span{font-size:1.1rem}
 @media (max-width:420px){.toy{font-size:.75rem;padding:7px 9px}}
+@media (max-width:520px){footer{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}footer .toy{flex-direction:column;gap:1px;font-size:.66rem;padding:5px 2px;white-space:nowrap;justify-content:center}}
 </style>
 
 </head>
@@ -126,7 +127,9 @@ footer{display:flex;justify-content:center;gap:10px;padding-block:6px calc(12px 
 </div>
 <div class="ladder pad" id="ladder" aria-label="進化の流れ"></div>
 <footer class="pad">
-  <button class="toy" id="storm" type="button"><span aria-hidden="true">🌪️</span>ゼリー台風</button>
+  <button class="toy storm" id="storm" type="button"><span aria-hidden="true">🌪️</span>ぐるぐる台風</button>
+  <button class="toy storm" id="stormPop" type="button"><span aria-hidden="true">💥</span>ぎゅっとパーン</button>
+  <button class="toy storm" id="stormCorn" type="button"><span aria-hidden="true">🍿</span>ポップコーン</button>
   <button class="toy" id="flip" type="button" aria-pressed="false"><span aria-hidden="true">🙃</span>重力反転</button></footer>
 
 <script>
@@ -577,7 +580,7 @@ function feverTick(now){
 }
 
 /* ---------- toys & cleanup ---------- */
-let stormUntil=0,cleanUntil=0,dangerT=0,lastCheck=performance.now(),cleanCool=0;
+let stormUntil=0,stormKind='swirl',stormDur=2600,popAt=0,popDone=true,lastCorn=0,cleanUntil=0,dangerT=0,lastCheck=performance.now(),cleanCool=0;
 function attract(k){
   for(let i=0;i<slimes.length;i++)for(let j=i+1;j<slimes.length;j++){
     const a=slimes[i],b=slimes[j];if(a.plugin.lv!==b.plugin.lv||a.plugin.lv>=MAX)continue;
@@ -587,7 +590,30 @@ function attract(k){
 }
 Events.on(engine,'beforeUpdate',()=>{
   const now=performance.now(),cx=J.x+J.w/2,cy=J.y+J.h/2;
-  if(now<stormUntil){
+  if(now<stormUntil&&stormKind==='pop'){
+    // ぎゅっとパーン: everything is sucked into a squeezed ball, trembles, then bursts outward
+    if(now<popAt){const e=1-(popAt-now)/1400;
+      for(const s of slimes){if(grab&&grab.body===s)continue;const v=s.velocity,dx=cx-s.position.x,dy=cy-s.position.y;
+        Body.setVelocity(s,{x:v.x*.86+dx*.009+(e>.75?(Math.random()-.5)*1.6:0),y:v.y*.86+dy*.009+(e>.75?(Math.random()-.5)*1.6:0)})}
+      shakeUntil=now+60;shakeAmp=1+e*3}
+    else if(!popDone){popDone=true;
+      for(const s of slimes){if(grab&&grab.body===s)continue;let dx=s.position.x-cx,dy=s.position.y-cy,d=Math.hypot(dx,dy);if(d<4){const a=Math.random()*6.283;dx=Math.cos(a);dy=Math.sin(a);d=1}
+        const v=10+Math.random()*6;Body.setVelocity(s,{x:dx/d*v,y:dy/d*v-3*gsign()});Body.setAngularVelocity(s,(Math.random()-.5)*.5);s.plugin.amp=.32}
+      RAINBOW.forEach((c,i)=>burst(cx,cy,c,10,J.w*.12));confetti(cx,cy,24,9);flash(.3);shake(340,9);
+      sWet(1700,180,.42,.5);sSquish(210,55,.45,.5,17);for(let i=0;i<10;i++)sBloop(.05+i*.04,.09);
+      floats.push({x:cx,y:cy-40,text:'パーン！',life:1,big:true,rainbow:true,fast:true});
+      try{navigator.vibrate&&navigator.vibrate([30,20,80])}catch(e){}}
+  }
+  if(now<stormUntil&&stormKind==='corn'){
+    // ポップコーン: the jar floor keeps kicking random slimes up — pon, pon, pon
+    if(now-lastCorn>=160){lastCorn=now;const gs=gsign(),pool=slimes.filter(s=>!(grab&&grab.body===s)).sort((a,b)=>(b.position.y-a.position.y)*gs);
+      const low=pool.slice(0,Math.max(3,Math.ceil(pool.length*.6)));
+      for(let i=0;i<3&&low.length;i++){const s=low.splice(Math.floor(Math.random()*low.length),1)[0];
+        Body.setVelocity(s,{x:(Math.random()-.5)*6,y:-(8+Math.random()*6)*gs});Body.setAngularVelocity(s,(Math.random()-.5)*.4);s.plugin.amp=Math.min(.32,s.plugin.amp+.12);
+        burst(s.position.x,s.position.y+R(s.plugin.lv)*gs,LV[s.plugin.lv].c,4,R(s.plugin.lv)*.5);sBloop(i*.03,.12)}
+      shake(90,2)}
+  }
+  if(now<stormUntil&&stormKind==='swirl'){
     const k=Math.sin((1-(stormUntil-now)/2600)*Math.PI);
     for(const s of slimes){if(grab&&grab.body===s)continue;const dx=s.position.x-cx,dy=s.position.y-cy,d=Math.hypot(dx,dy)||1;
       Body.applyForce(s,s.position,{x:-dy/d*.0026*k*s.mass,y:(dx/d*.0026-.0011*gsign())*k*s.mass})}
@@ -596,8 +622,13 @@ Events.on(engine,'beforeUpdate',()=>{
   if(now<feverUntil)attract(.00022);
   if(grab){Body.setPosition(grab.body,grab.anchor);Body.setVelocity(grab.body,{x:0,y:0})}
 });
-stormBtn.addEventListener('click',()=>{audio();stormUntil=performance.now()+2600;stormBtn.disabled=true;noise(200,900,1.2,.25);setTimeout(()=>stormBtn.disabled=false,2700);
-  slimes.forEach(s=>s.plugin.amp=Math.min(.32,s.plugin.amp+.15))});
+const stormBtns=[...document.querySelectorAll('.toy.storm')];
+function startStorm(kind,dur){const now=performance.now();if(now<stormUntil)return;audio();stormKind=kind;stormDur=dur;stormUntil=now+dur;
+  stormBtns.forEach(b=>b.disabled=true);setTimeout(()=>stormBtns.forEach(b=>b.disabled=false),dur+100);
+  slimes.forEach(s=>s.plugin.amp=Math.min(.32,s.plugin.amp+.15))}
+stormBtn.addEventListener('click',()=>{startStorm('swirl',2600);noise(200,900,1.2,.25)});
+document.getElementById('stormPop').addEventListener('click',()=>{startStorm('pop',2000);popAt=performance.now()+1400;popDone=false;sSquish(110,420,1.4,.3,9)});
+document.getElementById('stormCorn').addEventListener('click',()=>{startStorm('corn',2600);lastCorn=0});
 flipBtn.addEventListener('click',()=>{audio();engine.gravity.y*=-1;flipBtn.setAttribute('aria-pressed',String(engine.gravity.y<0));tone('sine',300,500,700,.3,.15);dangerT=0});
 // start screen
 let started=false;

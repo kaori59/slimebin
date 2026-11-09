@@ -425,7 +425,7 @@ function startFever(x,y){
   flash(.55);shake(260,6);confetti(x,y,40,9);
   floats.push({x:J.x+J.w/2,y:J.y+J.h*.34,text:'フィーバータイム！',sub:`ゼリー${FEVER_BIGS}個 点数×${FEVER_MULT}`,life:1,big:true,rainbow:true});
   [523,659,784,1047,1319,1568].forEach((f,i)=>tone('triangle',f,f,f*.98,.3,.16,i*.06));tone('sine',1047,1568,2093,.6,.1,.4);
-  bigs.push(makeBig(48,now+250,20));nextBig=now+1600;bigN=0;bigMade=1;bigPopped=0;
+  bigs.push(makeBig(48,now+250,26));nextBig=now+1600;bigN=0;bigMade=1;bigPopped=0;
   rollNext();slimes.forEach(s=>s.plugin.amp=Math.min(.32,s.plugin.amp+.2));
   try{navigator.vibrate&&navigator.vibrate([40,40,40,40,120])}catch(e){}
 }
@@ -592,7 +592,7 @@ const BGM=(()=>{
 let feverWas=false,lastBub=0,bubLane=0;
 function feverTick(now){
   const on=now<feverUntil;
-  if(on&&now>=nextBig&&bigMade<FEVER_BIGS&&!bigs.length){bigs.push(makeBig(26,now,3,.74,[.3,.7,.5][bigN++%3]));bigMade++;nextBig=now+1400}
+  if(on&&now>=nextBig&&bigMade<FEVER_BIGS&&!bigs.length){bigs.push(makeBig(26,now,6,.74,[.3,.7,.5][bigN++%3]));bigMade++;nextBig=now+1400}
   if(on&&now-lastBub>=200){lastBub=now;bubLane=(bubLane+2)%5;const bx=J.x+J.w*(.1+.8*(bubLane+Math.random()*.6)/5.6);
     confs.push({x:bx,y:gsign()>0?J.y+J.h-6:J.y+6,vx:0,vy:-(1.3+Math.random()*.6)*gsign(),r:7+Math.random()*6,ph:Math.random()*6,life:1.4});sBloop(0,.035)}
   if(on&&Math.random()<.06)confs.push({x:J.x+Math.random()*J.w,y:gsign()>0?J.y+J.h-6:J.y+6,vx:0,vy:-(0.6+Math.random()*.9)*gsign(),r:3+Math.random()*8,ph:Math.random()*6,life:1.4});

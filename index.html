@@ -524,7 +524,10 @@ const BGM=(()=>{
   function nz(t,dur,dest){const s=ac.createBufferSource();s.buffer=nb;s.connect(dest);s.start(t,Math.random()*.5);s.stop(t+dur+.02)}
   function filt(type,f,q,dest){const b=ac.createBiquadFilter();b.type=type;b.frequency.value=f;b.Q.value=q||.7;b.connect(dest);return b}
   const I={
-    marimba(t,n,v=.22){const f=mtof(n),g=env(t,v,.004,.45);osc('sine',f,t,.5,g);const g2=env(t,v*.25,.002,.08);osc('sine',f*3.9,t,.1,g2)},
+    lead(t,n,v=.055,dur=.16){const f=mtof(n),g=env(t,v,.004,dur),lp=filt('lowpass',2600,1,g);osc('square',f,t,dur+.05,lp);osc('square',f*1.006,t,dur+.05,lp)},
+    synbass(t,n,v=.15){const f=mtof(n),g=env(t,v,.004,.18),lp=filt('lowpass',1800,6,g);lp.frequency.setValueAtTime(1800,t);lp.frequency.exponentialRampToValueAtTime(260,t+.16);osc('sawtooth',f,t,.22,lp)},
+    pad(t,ns,dur,v=.035){ns.forEach(n=>{const f=mtof(n),g=ac.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+.5);g.gain.setValueAtTime(v,t+dur-.4);g.gain.linearRampToValueAtTime(0,t+dur);g.connect(bus);
+      const lp=filt('lowpass',1100,.6,g);osc('sawtooth',f*1.004,t,dur,lp);osc('sawtooth',f*.996,t,dur,lp)})},
     bell(t,n,v=.09){const f=mtof(n),g=env(t,v,.002,.2),lp=filt('lowpass',3200,1,g);osc('square',f,t,.25,lp);const g2=env(t,v*.6,.002,.3);osc('sine',f*2,t,.32,g2)},
     pan(t,n,v=.17){const f=mtof(n),g=env(t,v,.004,.6);osc('sine',f,t,.65,g);const g2=env(t,v*.3,.003,.3);osc('sine',f*2.76,t,.35,g2);const g3=env(t,v*.12,.002,.15);osc('sine',f*5.4,t,.2,g3)},
     bass(t,n,v=.22,dur=.45){const f=mtof(n),g=env(t,v,.006,dur),lp=filt('lowpass',900,.8,g);osc('triangle',f,t,dur+.05,lp)},
@@ -535,8 +538,10 @@ const BGM=(()=>{
   };
   const _=null;
   const SONG={
-    A:{bpm:92,vol:.5,mel:[72,_,76,79, 76,_,74,72, 74,_,76,74, 72,_,67,_, 69,_,72,76, 74,_,72,69, 67,_,69,72, 74,_,_,_],
-      play(s,t,b,sd){const R=[48,43,45,43][b];if(s%8===0){I.bass(t,R);I.kick(t,.3)}if(s%8===4)I.bass(t,R+7,.16);if(s%2)I.shaker(t);const m=this.mel[s];if(m)I.marimba(t,m)}},
+    // うちまくれダッシュ (normal): driving 4-on-the-floor, Am-F-C-G, game-ish square lead
+    H:{bpm:132,vol:.5,mel:[76,_,76,77, 76,_,72,_, 77,_,77,79, 81,_,77,_, 79,_,79,_, 84,_,79,76, 74,_,76,_, 79,_,_,_],
+      play(s,t,b,sd){const R=[45,41,48,43][b],k=s%8;I.synbass(t,R+(k===7?12:0));if(s%2===0)I.kick(t,.5);if(k===2||k===6)I.clap(t,.13);I.hat(t+sd/2,.04);
+        if(k===0)I.pad(t,[[57,60,64],[53,57,60],[55,60,64],[55,59,62]][b],sd*8,.025);const m=this.mel[s];if(m)I.lead(t,m)}},
     D:{bpm:150,vol:.6,mel:[84,_,_,83, 84,_,88,_, 84,_,_,83, 81,_,79,_, 77,_,_,79, 81,_,84,_, 83,_,79,_, 86,_,_,_],
       play(s,t,b,sd){const C=[[60,64,67],[57,60,64],[53,57,60],[55,59,62]][b],arp=[C[0]+12,C[1]+12,C[2]+12,C[0]+24,C[1]+24,C[2]+24,C[1]+24,C[0]+24][s%8];
         I.bell(t,arp,.06);I.bell(t+sd/2,arp+12,.035);const k=s%8;if(k%2===0){I.kick(t,.45);I.bass(t,C[0]-12,.2,.2)}if(k===2||k===6)I.clap(t);I.hat(t+sd/2,.05);const m=this.mel[s];if(m)I.pan(t,m,.14)}},
@@ -546,7 +551,7 @@ const BGM=(()=>{
     if(!bus){bus=ac.createGain();bus.gain.value=0;bus.connect(out);nb=ac.createBuffer(1,ac.sampleRate,ac.sampleRate);const d=nb.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1}
     const now=ac.currentTime;
     if(!started||rec.muted||document.hidden||ac.state!=='running'){bus.gain.setTargetAtTime(0,now,.04);playing=null;return}
-    const want=fever()?'D':'A',sg=SONG[want];
+    const want=fever()?'D':'H',sg=SONG[want];
     if(want!==playing){playing=want;step=0;nextT=now+.08}
     bus.gain.setTargetAtTime(sg.vol,now,.08);
     if(nextT<now)nextT=now+.05;

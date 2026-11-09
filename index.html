@@ -33,33 +33,53 @@ img{max-width:100%}
   --lid:#b98a5e;--danger:#e0566a;--float:#2f3b45;--float-edge:#ffffff;
   --veil:rgba(228,238,242,.55);
   --cloth:#f7b3c8;--cloth-dot:#ffffff;--ribbon:#e8628f;--ribbon-dark:#c2416f;--glass-tint:rgba(255,205,225,.45);
-  --btn:#ffffff;--btn-edge:#c9d8df;--btn-on:#ffe8a3;
+  --btn:#ffffff;--btn-edge:#c9d8df;--btn-on:#ffe8a3;--label:#ffffff;--stitch:rgba(240,140,175,.55);
   --font:"M PLUS Rounded 1c","Hiragino Maru Gothic ProN","Yu Gothic",sans-serif;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#182027;--bg-dot:rgba(160,200,220,.06);--ink:#e3edf2;--ink-soft:#93a5b0;
   --glass:rgba(160,200,230,.08);--glass-edge:rgba(200,230,250,.55);--glass-shade:rgba(0,0,0,.35);
-  --lid:#7d5d40;--danger:#ff6f82;--float:#ffffff;--float-edge:#182027;--btn:#24303a;--btn-edge:#3a4a56;--btn-on:#5a4a1e;
+  --lid:#7d5d40;--danger:#ff6f82;--float:#ffffff;--float-edge:#182027;--btn:#24303a;--btn-edge:#3a4a56;--btn-on:#5a4a1e;--label:#24303a;--stitch:rgba(224,122,160,.5);
   --veil:rgba(24,32,39,.6);--cloth:#a8607a;--cloth-dot:rgba(255,235,245,.75);--ribbon:#e07aa0;--ribbon-dark:#a84470;--glass-tint:rgba(255,150,190,.08);color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#182027;--bg-dot:rgba(160,200,220,.06);--ink:#e3edf2;--ink-soft:#93a5b0;
   --glass:rgba(160,200,230,.08);--glass-edge:rgba(200,230,250,.55);--glass-shade:rgba(0,0,0,.35);
-  --lid:#7d5d40;--danger:#ff6f82;--float:#ffffff;--float-edge:#182027;--btn:#24303a;--btn-edge:#3a4a56;--btn-on:#5a4a1e;
+  --lid:#7d5d40;--danger:#ff6f82;--float:#ffffff;--float-edge:#182027;--btn:#24303a;--btn-edge:#3a4a56;--btn-on:#5a4a1e;--label:#24303a;--stitch:rgba(224,122,160,.5);
   --veil:rgba(24,32,39,.6);--cloth:#a8607a;--cloth-dot:rgba(255,235,245,.75);--ribbon:#e07aa0;--ribbon-dark:#a84470;--glass-tint:rgba(255,150,190,.08);color-scheme:dark}
 html,body{height:100%}html{height:100dvh}
 body{background:var(--bg);color:var(--ink);font-family:var(--font);overflow:hidden;display:flex;flex-direction:column;
   -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
   background-image:radial-gradient(var(--bg-dot) 1.5px,transparent 1.6px);background-size:22px 22px}
 .pad{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-header{display:flex;align-items:center;justify-content:space-between;gap:8px 14px;flex-wrap:wrap;padding-block:10px 4px}
-h1{margin:0;font-size:1.1rem;font-weight:800;letter-spacing:.02em}
-.score{display:flex;align-items:baseline;gap:6px;font-size:.8rem;color:var(--ink-soft)}
-.score b{font-size:1.6rem;font-weight:800;color:var(--ink);font-variant-numeric:tabular-nums;display:inline-block;transition:transform .12s}
-.score b.bump{transform:scale(1.18)}
-.left{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
-.info{display:flex;gap:14px;align-items:center;flex-wrap:wrap;font-size:.8rem;color:var(--ink-soft)}
-.info b{color:var(--ink);font-weight:800}
-#mute{font:inherit;font-size:.75rem;color:var(--ink-soft);background:none;border:1px solid var(--btn-edge);border-radius:99px;padding:2px 9px;cursor:pointer}
+/* header: sticker logo + pink jelly score capsule, then a stitched jar label holding the stats */
+header{display:flex;flex-direction:column;gap:7px;padding-block:9px 2px;max-width:720px;width:100%;margin-inline:auto;box-sizing:border-box}
+.top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.logo{margin:0;font-size:min(1.28rem,4.4vw);font-weight:800;line-height:1.15;white-space:nowrap;letter-spacing:.01em}
+.logo span{display:inline-block;--o:#fff;text-shadow:2px 0 var(--o),-2px 0 var(--o),0 2px var(--o),0 -2px var(--o),1.5px 1.5px var(--o),-1.5px 1.5px var(--o),1.5px -1.5px var(--o),-1.5px -1.5px var(--o),0 4px 0 var(--sh)}
+.logo .l1{color:#28ade0;--sh:rgba(40,173,224,.32)}
+.logo .l2{color:#ff5c96;--sh:rgba(255,92,150,.32);margin-left:1px}
+.logo .l3{color:#ffad14;--sh:rgba(255,173,20,.4);transform:rotate(12deg);margin-left:2px;animation:hop 2.6s ease-in-out infinite}
+@keyframes hop{0%,70%,100%{transform:rotate(12deg) translateY(0)}80%{transform:rotate(4deg) translateY(-5px)}90%{transform:rotate(16deg) translateY(0) scale(1.08,.92)}}
+.score{position:relative;display:flex;align-items:center;gap:6px;padding:3px 14px 5px 7px;border-radius:999px;flex:none;
+  background:linear-gradient(180deg,#ffb6d1,#ff7dab);border:2px solid #fff;box-shadow:0 3px 0 #e0518a,0 6px 14px rgba(224,81,138,.25),inset 0 -5px 8px rgba(190,30,95,.16)}
+.score::before{content:'';position:absolute;left:14%;right:22%;top:2px;height:38%;border-radius:99px;background:linear-gradient(rgba(255,255,255,.8),rgba(255,255,255,0));pointer-events:none}
+.score small{position:relative;font-size:.62rem;font-weight:800;color:#fff;background:rgba(190,35,98,.32);border-radius:99px;padding:2px 7px}
+.score b{position:relative;font-size:1.4rem;font-weight:800;line-height:1.1;color:#fff;text-shadow:0 2px 0 #cf3f78;font-variant-numeric:tabular-nums;display:inline-block;transition:transform .12s}
+.score.long{padding:3px 10px 5px 6px}.score.long b{font-size:min(1.05rem,4.3vw)}
+.score b.bump{transform:scale(1.14,.88)}
+.info{display:flex;align-items:stretch;background:var(--label);border-radius:16px;padding:5px 5px;box-shadow:0 3px 0 var(--btn-edge);outline:1.5px dashed var(--stitch);outline-offset:-4px}
+.cell{flex:1 1 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:2px 5px;min-width:0}
+.cell+.cell{border-left:1.5px dotted var(--btn-edge)}
+.cell small{font-size:.58rem;font-weight:800;color:var(--ink-soft);line-height:1.2;white-space:nowrap}
+.cell b{display:flex;align-items:center;gap:3px;font-size:.8rem;font-weight:800;color:var(--ink);line-height:1.25;white-space:nowrap;font-variant-numeric:tabular-nums}
+.cell.nx b{font-size:.84rem}
+.mini{display:inline-block;flex:none;width:15px;height:13px;border-radius:50% 50% 46% 46%/60% 60% 40% 40%;box-shadow:inset 0 -2px 0 rgba(0,0,0,.13);
+  background:radial-gradient(circle at 34% 58%,#2f3b45 0 1.2px,transparent 1.6px),radial-gradient(circle at 66% 58%,#2f3b45 0 1.2px,transparent 1.6px),radial-gradient(circle at 28% 26%,rgba(255,255,255,.95) 0 1.7px,transparent 2.2px),var(--c,#7fd6f2)}
+.mini.rb,.mini.top{--c:conic-gradient(#ff6b6b,#ffd93d,#6bcb77,#4dd6ff,#4d96ff,#c58cf0,#ff6b6b)}
+.mini[hidden]{display:none}
+#mute{align-self:center;flex:none;margin-inline:4px 2px;font:inherit;font-size:.62rem;font-weight:800;color:var(--ink-soft);background:var(--bg);border:1.5px solid var(--btn-edge);border-radius:99px;padding:3px 7px;cursor:pointer;white-space:nowrap}
+@media (max-width:520px){.wide{display:none}}
+@media (prefers-reduced-motion:reduce){.logo .l3{animation:none}}
 #stage{flex:1;position:relative;min-height:0;touch-action:none}
 canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 .toast{position:absolute;left:50%;top:14%;transform:translate(-50%,0) scale(.9);background:var(--btn);color:var(--ink);border:2px solid var(--btn-edge);
@@ -106,13 +126,16 @@ footer{display:flex;justify-content:center;gap:10px;padding-block:6px calc(12px 
 </head>
 <body>
 <header class="pad">
-  <div class="left"><h1>スライムうちまくれ！</h1><span class="score">点数<b id="score">0</b></span></div>
+  <div class="top">
+    <h1 class="logo" aria-label="スライムうちまくれ！"><span class="l1">スライム</span><span class="l2">うちまくれ</span><span class="l3">！</span></h1>
+    <div class="score"><small>点数</small><b id="score">0</b></div>
+  </div>
   <div class="info">
-    <span>次 <b id="next">ちびしずく</b></span>
-    <span>ハイスコア <b id="hi">0</b></span>
-    <span>最高連鎖 <b id="mc">0</b></span>
-    <span>最高進化 <b id="best">—</b></span>
-    <span>虹 <b id="rain">0</b></span>
+    <span class="cell nx"><small>次</small><b><i class="mini" id="nextIco"></i><span id="next">ちびしずく</span></b></span>
+    <span class="cell"><small>ハイスコア</small><b id="hi">0</b></span>
+    <span class="cell"><small>最高連鎖</small><b id="mc">0</b></span>
+    <span class="cell"><small>最高進化</small><b><i class="mini" id="bestIco"></i><span id="best" class="wide">—</span></b></span>
+    <span class="cell"><small>虹</small><b><i class="mini rb"></i><span id="rain">0</span></b></span>
     <button id="mute" type="button">音 あり</button>
   </div>
 </header>
@@ -145,6 +168,8 @@ for(let l=0;l<=MAX;l++){LV[l].light=mix(LV[l].c,'w',.55);LV[l].dark=mix(LV[l].c,
 
 const stage=document.getElementById('stage'),cv=document.getElementById('c'),ctx=cv.getContext('2d');
 const $next=document.getElementById('next'),$best=document.getElementById('best'),$rain=document.getElementById('rain'),toastEl=document.getElementById('toast');
+const $nextIco=document.getElementById('nextIco'),$bestIco=document.getElementById('bestIco');
+function setMini(el,l){el.hidden=!(l>=0)||(el===$bestIco&&!l);el.classList.toggle('top',l===MAX);if(l<MAX&&l>=0)el.style.setProperty('--c',LV[l].c);el.title=l>=0&&LV[l]?LV[l].n:''}
 const stormBtn=document.getElementById('storm'),flipBtn=document.getElementById('flip'),muteBtn=document.getElementById('mute');
 const ladder=document.getElementById('ladder');
 for(let l=1;l<=MAX;l++){const i=document.createElement('i');i.style.setProperty('--c',LV[l].c);i.title=LV[l].n;if(l===MAX)i.className='rainbow';ladder.appendChild(i)}
@@ -163,9 +188,9 @@ function celebrateRecord(n){
   const mc=document.getElementById('mc');mc.classList.add('bump');setTimeout(()=>mc.classList.remove('bump'),700);
   try{navigator.vibrate&&navigator.vibrate([20,40,20,40,50])}catch(e){}
 }
-function addScore(n){score+=n;$score.textContent=score.toLocaleString();$score.classList.add('bump');setTimeout(()=>$score.classList.remove('bump'),120);
+function addScore(n){score+=n;$score.textContent=score.toLocaleString();$score.parentNode.classList.toggle('long',score>=1e6);$score.classList.add('bump');setTimeout(()=>$score.classList.remove('bump'),120);
   if(score>rec.hi){rec.hi=score;saveRec()}$hi.textContent=rec.hi.toLocaleString()}
-function showRec(){$hi.textContent=rec.hi.toLocaleString();document.getElementById('mc').textContent=rec.maxCombo||0;$best.textContent=rec.best?LV[rec.best].n:'—';$rain.textContent=rec.rainbows;muteBtn.textContent=rec.muted?'音 なし':'音 あり';
+function showRec(){$hi.textContent=rec.hi.toLocaleString();document.getElementById('mc').textContent=rec.maxCombo||0;$best.textContent=rec.best?LV[rec.best].n:'—';setMini($bestIco,rec.best||0);$rain.textContent=rec.rainbows;muteBtn.textContent=rec.muted?'音 なし':'音 あり';
   [...ladder.children].forEach((d,i)=>d.classList.toggle('got',i+1<=rec.best))}
 showRec();
 
@@ -239,7 +264,7 @@ function removeSlime(b){b.plugin.gone=true;Composite.remove(engine.world,b);slim
 let nextLv=1,feverUntil=0,feverPts=0,lastRain=0;
 const fever=()=>performance.now()<feverUntil;
 let drops=0;
-function rollNext(){const r=Math.random();nextLv=fever()?1+Math.floor(r*4):drops>3&&Math.random()<.07?0:r<.45?1:r<.75?2:r<.93?3:4;drops++;$next.textContent=LV[nextLv].n;if(nextLv===0)toast('ふしぎ玉：どのスライムとも合体できる')}
+function rollNext(){const r=Math.random();nextLv=fever()?1+Math.floor(r*4):drops>3&&Math.random()<.07?0:r<.45?1:r<.75?2:r<.93?3:4;drops++;$next.textContent=LV[nextLv].n;setMini($nextIco,nextLv);if(nextLv===0)toast('ふしぎ玉：どのスライムとも合体できる')}
 rollNext();
 const gsign=()=>engine.gravity.y>=0?1:-1;
 const spawnY=l=>gsign()>0?J.y+R(l)+6:J.y+J.h-R(l)-6;
@@ -637,7 +662,7 @@ document.getElementById('go').addEventListener('click',()=>{
   audio();if(ac&&ac.state==='suspended')ac.resume();
   started=true;document.getElementById('start').hidden=true;
   [...slimes].forEach(removeSlime);particles=[];floats=[];
-  feverUntil=0;feverWas=false;feverPts=0;bigs=[];confs=[];goos=[];strands=[];rings=[];ghosts=[];beadShown=0;beadPops=[];charge=0;rapidReady=false;rapidUntil=0;rapidHold=false;rapidWas=false;score=0;$score.textContent='0';combo=0;lastMergeT=0;recPending=false;drops=0;rollNext();
+  feverUntil=0;feverWas=false;feverPts=0;bigs=[];confs=[];goos=[];strands=[];rings=[];ghosts=[];beadShown=0;beadPops=[];charge=0;rapidReady=false;rapidUntil=0;rapidHold=false;rapidWas=false;score=0;$score.textContent='0';$score.parentNode.classList.remove('long');combo=0;lastMergeT=0;recPending=false;drops=0;rollNext();
   floats.push({x:J.x+J.w/2,y:J.y+J.h*.42,text:'スタート！',sub:'',life:1,big:true,rainbow:true,fast:true});
   [523,784,1047].forEach((f,i)=>tone('triangle',f,f,f,.22,.16,i*.08));
 });

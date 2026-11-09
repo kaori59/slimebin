@@ -425,7 +425,7 @@ function startFever(x,y){
   flash(.55);shake(260,6);confetti(x,y,40,9);
   floats.push({x:J.x+J.w/2,y:J.y+J.h*.34,text:'フィーバータイム！',sub:`ゼリー${FEVER_BIGS}個 点数×${FEVER_MULT}`,life:1,big:true,rainbow:true});
   [523,659,784,1047,1319,1568].forEach((f,i)=>tone('triangle',f,f,f*.98,.3,.16,i*.06));tone('sine',1047,1568,2093,.6,.1,.4);
-  bigs.push(makeBig(48,now+250,26));nextBig=now+1600;bigN=0;bigMade=1;bigPopped=0;
+  bigs.push(makeBig(48,now+250,30));nextBig=now+1600;bigN=0;bigMade=1;bigPopped=0;
   rollNext();slimes.forEach(s=>s.plugin.amp=Math.min(.32,s.plugin.amp+.2));
   try{navigator.vibrate&&navigator.vibrate([40,40,40,40,120])}catch(e){}
 }
@@ -452,10 +452,11 @@ function sWet(f0,f1,dur,vol,delay){
   const g=ac.createGain();g.gain.setValueAtTime(.0001,n);g.gain.exponentialRampToValueAtTime(vol,n+.015);g.gain.exponentialRampToValueAtTime(.0001,n+dur);
   s.connect(f).connect(g).connect(out);s.start(n)}
 function sBloop(delay,vol){const f=280+Math.random()*380;tone('sine',f,f*1.9,f*2.6,.09,vol||.13,delay)}
+const feverLv=()=>{const r=Math.random();return r<.9?1:r<.97?2:3};
 function makeBig(n,t0,real,sc,fx){
   // lots of little chibishizuku packed inside, spread like seeds in a sunflower.
   // only `real` of them stay as slimes; the rest pop into bubbles mid-air, so a fever never piles up enough for another fever
-  const kids=[];for(let i=0;i<n;i++){const a=i*2.39996,d=Math.sqrt((i+.5)/n)*.8;kids.push({a,d,ph:Math.random()*6,real:false})}
+  const kids=[];for(let i=0;i<n;i++){const a=i*2.39996,d=Math.sqrt((i+.5)/n)*.8;kids.push({a,d,ph:Math.random()*6,real:false,lv:feverLv()})}
   const step=n/real;for(let j=0;j<real;j++)kids[Math.floor(j*step)].real=true;
   return {t0,n,real,kids,sc:sc||1,fx:fx||.5,fired:false,landed:false,swell:false,p:{r:0,amp:.05,ph:Math.random()*6}}}
 // a giant see-through rainbow jelly, full of chibishizuku, drops in, wobbles, swells and splits open
@@ -469,8 +470,8 @@ function kidPos(sp,P,k,now){const d=k.d*P.r,a=k.a+Math.sin(now/700+k.ph)*.08;ret
 function burstBig(sp,P,now){
   sp.fired=true;if(now<feverUntil&&++bigPopped>=FEVER_BIGS)feverUntil=Math.min(feverUntil,now+1800);let room=Math.max(0,70-slimes.length);
   sp.kids.forEach(k=>{const q=kidPos(sp,P,k,now),dx=q.x-P.x,dy=q.y-P.y,d=Math.hypot(dx,dy)||1,v=4+Math.random()*4+k.d*6,vx=dx/d*v,vy=dy/d*v-2.5*gsign();
-    let b;if(k.real&&room>0){room--;b=addSlime(1,q.x,q.y);Body.setVelocity(b,{x:vx,y:vy});b.plugin.amp=.32}
-    else{b={position:{x:q.x,y:q.y},vx,vy,ph:k.ph,plugin:{gone:false},pop:now+250+Math.random()*650};ghosts.push(b)}
+    let b;if(k.real&&room>0){room--;b=addSlime(k.lv,q.x,q.y);Body.setVelocity(b,{x:vx,y:vy});b.plugin.amp=.32}
+    else{b={position:{x:q.x,y:q.y},vx,vy,ph:k.ph,plugin:{gone:false,lv:k.lv},pop:now+250+Math.random()*650};ghosts.push(b)}
     strands.push({b,x:P.x+dx*.25,y:P.y+dy*.25,t0:now})});
   // the jelly skin tears into gooey rainbow drops that splat on the glass and slowly drip
   for(let i=0;i<22;i++){const a=i/22*6.283+Math.random()*.25,v=5+Math.random()*7;
@@ -502,7 +503,7 @@ function drawBig(sp,now){
   ctx.restore();
   // chibishizuku floating inside
   ctx.save();bigXf(P);ctx.translate(-P.x,-P.y);
-  for(const k of sp.kids){const q=kidPos(sp,P,k,now);drawSlime(q.x,q.y,1,{r:R(1)*.84,amp:P.e>.86?.12:.04,ph:k.ph+now/500},{x:0,y:0},null,now,false)}
+  for(const k of sp.kids){const q=kidPos(sp,P,k,now);drawSlime(q.x,q.y,k.lv,{r:R(k.lv)*.84,amp:P.e>.86?.12:.04,ph:k.ph+now/500},{x:0,y:0},null,now,false)}
   ctx.restore();
   // shiny skin on top
   ctx.save();bigXf(P);blobPath(P.r,amp,sp.p.ph,now);ctx.globalAlpha=.85;ctx.lineWidth=3.5;ctx.strokeStyle=cg||'#c58cf0';ctx.stroke();
@@ -515,7 +516,7 @@ function drawGoo(now,ts){
   // stretchy strands between the opening jelly and each chibishizuku as it flies out
   for(const s of strands){const t=(now-s.t0)/320,b=s.b;if(t>=1||b.plugin.gone)continue;
     const dx=b.position.x-s.x,dy=b.position.y-s.y,d=Math.hypot(dx,dy)||1,nx=-dy/d,ny=dx/d,w0=R(1)*.55*(1-t),w1=R(1)*.35*(1-t)+.5;
-    ctx.globalAlpha=.75*(1-t);ctx.fillStyle=LV[1].c;ctx.beginPath();
+    ctx.globalAlpha=.75*(1-t);ctx.fillStyle=LV[b.plugin.lv||1].c;ctx.beginPath();
     ctx.moveTo(s.x+nx*w0,s.y+ny*w0);ctx.quadraticCurveTo(s.x+dx*.5+nx*w1*.3,s.y+dy*.5+ny*w1*.3,b.position.x+nx*w1,b.position.y+ny*w1);
     ctx.lineTo(b.position.x-nx*w1,b.position.y-ny*w1);ctx.quadraticCurveTo(s.x+dx*.5-nx*w1*.3,s.y+dy*.5-ny*w1*.3,s.x-nx*w0,s.y-ny*w0);ctx.fill()}
   strands=strands.filter(s=>now-s.t0<320);
@@ -523,8 +524,8 @@ function drawGoo(now,ts){
   let bl=0;
   for(const g of ghosts){const q=g.position;g.vy+=.28*gsign()*ts;g.vx*=.99;q.x+=g.vx*ts;q.y+=g.vy*ts;
     if(q.x<J.x+8||q.x>J.x+J.w-8){g.vx*=-.6;q.x=Math.max(J.x+8,Math.min(J.x+J.w-8,q.x))}
-    if(now>=g.pop||q.y>J.y+J.h-8||q.y<J.y+8){g.plugin.gone=true;burst(q.x,q.y,LV[1].c,6,4);confetti(q.x,q.y,2,2);if(bl++<3)sBloop(0,.07);continue}
-    drawSlime(q.x,q.y,1,{r:R(1)*.9,amp:.22,ph:g.ph+now/200},{x:g.vx,y:g.vy},null,now,false)}
+    if(now>=g.pop||q.y>J.y+J.h-8||q.y<J.y+8){g.plugin.gone=true;burst(q.x,q.y,LV[g.plugin.lv].c,6,4);confetti(q.x,q.y,2,2);if(bl++<3)sBloop(0,.07);continue}
+    drawSlime(q.x,q.y,g.plugin.lv,{r:R(g.plugin.lv)*.9,amp:.22,ph:g.ph+now/200},{x:g.vx,y:g.vy},null,now,false)}
   ghosts=ghosts.filter(g=>!g.plugin.gone);
   // the jelly skin snapping open
   for(const g of rings){const t=(now-g.t0)/260;if(t>=1)continue;ctx.globalAlpha=(1-t)*.6;ctx.lineWidth=6*(1-t)+1;ctx.strokeStyle='#ffffff';ctx.beginPath();ctx.arc(g.x,g.y,g.r*(1+t*.6),0,7);ctx.stroke()}
@@ -592,12 +593,12 @@ const BGM=(()=>{
 let feverWas=false,lastBub=0,bubLane=0;
 function feverTick(now){
   const on=now<feverUntil;
-  if(on&&now>=nextBig&&bigMade<FEVER_BIGS&&!bigs.length){bigs.push(makeBig(26,now,6,.74,[.3,.7,.5][bigN++%3]));bigMade++;nextBig=now+1400}
+  if(on&&now>=nextBig&&bigMade<FEVER_BIGS&&!bigs.length){bigs.push(makeBig(26,now,7,.74,[.3,.7,.5][bigN++%3]));bigMade++;nextBig=now+1400}
   if(on&&now-lastBub>=200){lastBub=now;bubLane=(bubLane+2)%5;const bx=J.x+J.w*(.1+.8*(bubLane+Math.random()*.6)/5.6);
     confs.push({x:bx,y:gsign()>0?J.y+J.h-6:J.y+6,vx:0,vy:-(1.3+Math.random()*.6)*gsign(),r:7+Math.random()*6,ph:Math.random()*6,life:1.4});sBloop(0,.035)}
   if(on&&Math.random()<.06)confs.push({x:J.x+Math.random()*J.w,y:gsign()>0?J.y+J.h-6:J.y+6,vx:0,vy:-(0.6+Math.random()*.9)*gsign(),r:3+Math.random()*8,ph:Math.random()*6,life:1.4});
   if(on&&now-lastRain>900&&slimes.length<56){lastRain=now;
-    const l=1,b=addSlime(l,J.x+R(l)+Math.random()*(J.w-2*R(l)),spawnY(l));Body.setVelocity(b,{x:(Math.random()-.5)*2,y:2*gsign()});
+    const l=feverLv(),b=addSlime(l,J.x+R(l)+Math.random()*(J.w-2*R(l)),spawnY(l));Body.setVelocity(b,{x:(Math.random()-.5)*2,y:2*gsign()});
     if(Math.random()<.4)tone('sine',900+Math.random()*500,1200,700,.08,.05)}
   if(feverWas&&!on){floats.push({x:J.x+J.w/2,y:J.y+J.h*.4,text:'フィーバー終わり！',sub:`フィーバーで +${feverPts.toLocaleString()}`,life:1,big:true,rainbow:true});
     [1047,784,659,523].forEach((f,i)=>tone('triangle',f,f,f,.2,.12,i*.08));rollNext()}

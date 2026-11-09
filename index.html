@@ -422,8 +422,10 @@ Events.on(engine,'afterUpdate',()=>{
     if(l>rec.best){rec.best=l;saveRec();showRec();if(l<MAX&&l>=4)toast(`初めての ${LV[l].n}！`)}
     if(l===MAX){rec.rainbows++;saveRec();showRec();celebrate(rec.rainbows);sRainbow();
       for(let i=0;i<5;i++)setTimeout(()=>burst(x,y,['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#c58cf0'][i],14,R(MAX)*1.2),i*90);
-      // a rainbow made during a fever pops right away, so no pair is left to restart the fever
-      if(fever())setTimeout(()=>{if(!n.plugin.gone){const px=n.position.x,py=n.position.y;if(grab&&grab.body===n)grab=null;removeSlime(n);rainbowBonus(px,py)}},700)}
+      // during a fever a lone rainbow stays in the jar; when a second one shows up, both pop for a bonus
+      // (so no pair is ever left to restart the fever)
+      if(fever())setTimeout(()=>{if(n.plugin.gone)return;const o=slimes.find(s=>s!==n&&!s.plugin.gone&&s.plugin.lv===MAX);if(!o)return;
+        [n,o].forEach((s,i)=>setTimeout(()=>{if(s.plugin.gone)return;const px=s.position.x,py=s.position.y;if(grab&&grab.body===s)grab=null;removeSlime(s);rainbowBonus(px,py)},i*250))},700)}
   }
 });
 function burst(x,y,c,n,r){for(let i=0;i<n;i++){const a=Math.random()*6.283,s=2+Math.random()*4;particles.push({x:x+Math.cos(a)*r*.7,y:y+Math.sin(a)*r*.7,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1,c,size:2+Math.random()*4})}}

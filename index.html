@@ -585,6 +585,8 @@ const BGM=(()=>{
     kick(t,v=.5){const g=env(t,v,.002,.28),o=osc('sine',140,t,.3,g);o.frequency.exponentialRampToValueAtTime(45,t+.14)},
     hat(t,v=.05){const g=env(t,v,.001,.04);nz(t,.06,filt('highpass',7000,.7,g))},
     shaker(t,v=.04){const g=env(t,v,.01,.06);nz(t,.09,filt('highpass',5000,.7,g))},
+    brass(t,n,v=.12,dur=.18){[n,n+12].forEach((m,i)=>{const f=mtof(m),g=env(t,v*(i?.5:1),.01,dur),lp=filt('lowpass',500,2,g);lp.frequency.setValueAtTime(500,t);lp.frequency.linearRampToValueAtTime(1600,t+.04);lp.frequency.exponentialRampToValueAtTime(400,t+dur);osc('sawtooth',f,t,dur+.05,lp);osc('sawtooth',f*1.008,t,dur+.05,lp)})},
+    timp(t,v=.5){const g=env(t,v,.002,.5),o=osc('sine',90,t,.55,g);o.frequency.exponentialRampToValueAtTime(48,t+.3);const g2=env(t,v*.25,.001,.08);nz(t,.1,filt('lowpass',600,1,g2))},
     clap(t,v=.16){[0,.012,.024].forEach((d,i)=>{const g=env(t+d,v*(i===2?1:.6),.001,i===2?.12:.02);nz(t+d,.15,filt('bandpass',1500,1.2,g))})},
   };
   const _=null;
@@ -596,13 +598,20 @@ const BGM=(()=>{
     D:{bpm:150,vol:.6,mel:[84,_,_,83, 84,_,88,_, 84,_,_,83, 81,_,79,_, 77,_,_,79, 81,_,84,_, 83,_,79,_, 86,_,_,_],
       play(s,t,b,sd){const C=[[60,64,67],[57,60,64],[53,57,60],[55,59,62]][b],arp=[C[0]+12,C[1]+12,C[2]+12,C[0]+24,C[1]+24,C[2]+24,C[1]+24,C[0]+24][s%8];
         I.bell(t,arp,.06);I.bell(t+sd/2,arp+12,.035);const k=s%8;if(k%2===0){I.kick(t,.45);I.bass(t,C[0]-12,.2,.2)}if(k===2||k===6)I.clap(t);I.hat(t+sd/2,.05);const m=this.mel[s];if(m)I.pan(t,m,.14)}},
+    // くいしんぼのテーマ (original): slow, heavy, low brass hits in a da-da-DAN rhythm, creeping up a half step
+    K:{bpm:118,vol:.75,
+      play(s,t,b,sd){const R=[38,38,39,37][b],k=s%8;
+        if(k===0||k===4){I.brass(t,R,.1,.12);I.timp(t,.35)}
+        if(k===1||k===5){I.brass(t,R,.1,.12);I.timp(t,.35)}
+        if(k===2||k===6){I.brass(t,R+(k===6&&b===3?3:0),.17,.5);I.timp(t,.7);I.kick(t,.45)}
+        if(k===0)I.pad(t,[R+24,R+25],sd*8,.016);if(k===3||k===7)I.hat(t,.025)}},
   };
   function tick(){
     if(!ac)return;
     if(!bus){bus=ac.createGain();bus.gain.value=0;bus.connect(out);nb=ac.createBuffer(1,ac.sampleRate,ac.sampleRate);const d=nb.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1}
     const now=ac.currentTime;
     if(!started||rec.muted||document.hidden||ac.state!=='running'){bus.gain.setTargetAtTime(0,now,.04);playing=null;return}
-    const want=fever()?'D':'H',sg=SONG[want];
+    const want=fever()?'D':(kui&&kui.phase!=='leave'&&kui.phase!=='flee')?'K':'H',sg=SONG[want];
     if(want!==playing){playing=want;step=0;nextT=now+.08}
     bus.gain.setTargetAtTime(sg.vol,now,.08);
     if(nextT<now)nextT=now+.05;
@@ -713,10 +722,11 @@ function kuiPick(){
   const c=slimes.filter(s=>!s.plugin.gone&&s.plugin.lv>0&&!(grab&&grab.body===s));if(!c.length)return null;
   const top=Math.max(...c.map(s=>s.plugin.lv)),a=c.filter(s=>s.plugin.lv===top);return a[Math.floor(Math.random()*a.length)]}
 function spawnKui(){const side=Math.random()<.5?-1:1,r=J.w*.105;
-  kui={side,r,x:side<0?J.x-r:J.x+J.w+r,x0:side<0?J.x-r:J.x+J.w+r,hx:side<0?J.x+r*1.25:J.x+J.w-r*1.25,y:J.y+r*2,lt:performance.now(),phase:'in',t0:performance.now(),hits:0,hitT:0,eaten:[],tgt:null,tongue:0,tx:0,ty:0,amp:.3,ph:0};
+  kui={side,r,r0:r,rT:r,x:side<0?J.x-r:J.x+J.w+r,x0:side<0?J.x-r:J.x+J.w+r,hx:side<0?J.x+r*1.25:J.x+J.w-r*1.25,y:J.y+r*1.25+18,lt:performance.now(),phase:'in',t0:performance.now(),hits:0,hitT:0,eaten:[],tgt:null,tongue:0,tx:0,ty:0,amp:.3,ph:0};
   sSquish(160,80,.55,.22,8);toast('くいしんぼが来た！ タップで追いはらおう')}
-function kuiGo(ph,now){const k=kui;k.phase=ph;k.t0=now;k.tgt=null;
+function kuiGo(ph,now){const k=kui;if(ph==='leave'&&k.eaten.length&&k.phase!=='grin'&&!fever())ph='grin';k.phase=ph;k.t0=now;k.tgt=null;
   if(k.carry&&(ph==='leave'||ph==='burp'))kuiGulp(now);
+  if(ph==='grin'){k.grin=true;k.tx=k.ty=0;floats.push({x:k.x,y:k.y-k.r*1.1,text:'ニヤリ',sub:'',life:1,big:true});[0,.16,.32].forEach((d,i)=>tone('sawtooth',196-i*12,190-i*12,170-i*12,.13,.07,d))}
   if(ph==='burp'){k.amp=.4;floats.push({x:k.x,y:k.y-k.r,text:'げっぷ',sub:'まんぷく…',life:1});sSquish(110,60,.5,.28,22)}}
 function kuiEat(now){const k=kui,s=k.tgt;if(!s||s.plugin.gone){k.phase='back';k.t0=now;return}
   const px=s.position.x,py=s.position.y,lv=s.plugin.lv;
@@ -724,7 +734,7 @@ function kuiEat(now){const k=kui,s=k.tgt;if(!s||s.plugin.gone){k.phase='back';k.
   removeSlime(s);k.tx=px;k.ty=py;k.carry={lv,p:{r:R(lv),amp:.35,ph:Math.random()*6}};k.tgt=null;k.phase='back';k.t0=now;
   burst(px,py,LV[lv].c,6,R(lv)*.6);sWet(1200,400,.18,.16);sSquish(380,520,.25,.14,30,.05);
   floats.push({x:px,y:py-10,text:'つかまった！',sub:'',life:1})}
-function kuiGulp(now){const k=kui,c=k.carry;if(!c)return;k.carry=null;k.eaten.push(c.lv);k.r*=1.08;k.amp=.42;k.gulpT=now;
+function kuiGulp(now){const k=kui,c=k.carry;if(!c)return;k.carry=null;k.eaten.push(c.lv);k.rT=k.r0*(1+.55*k.eaten.length);k.amp=.5;k.gulpT=now;
   sSquish(200,60,.4,.28,10);sWet(500,150,.3,.14,.08);shake(140,2.5);burst(k.x,k.y,LV[c.lv].c,8,k.r*.6);
   floats.push({x:k.x,y:k.y+k.r*1.6,text:'ごっくん',sub:'',life:1})}
 function kuiDrop(){const k=kui,c=k&&k.carry;if(!c)return;k.carry=null;
@@ -744,6 +754,8 @@ function kuiTick(now){
   if(!started){kui=null;return}
   if(!kui){if(nextKui&&now>nextKui){if(fever()||rapidOn()||slimes.length<4)nextKui=now+8000;else spawnKui()}return}
   const k=kui,t=now-k.t0,dt=Math.min(50,now-k.lt)/16.7;k.lt=now;k.amp*=Math.pow(.93,dt);k.ph+=.22*dt;
+  k.r+=(k.rT-k.r)*Math.min(1,.07*dt);
+  if(k.phase!=='in'&&k.phase!=='leave'&&k.phase!=='flee'){const hx=k.side<0?J.x+k.r*1.15:J.x+J.w-k.r*1.15,hy=J.y+k.r*1.25+18;k.x+=(hx-k.x)*Math.min(1,.15*dt);k.y+=(hy-k.y)*Math.min(1,.15*dt)}
   if(fever()&&k.phase!=='flee'&&k.phase!=='leave')kuiGo('leave',now);
   const look=()=>{if(k.tgt&&!k.tgt.plugin.gone){k.tx=k.tgt.position.x;k.ty=k.tgt.position.y}};
   switch(k.phase){
@@ -753,7 +765,8 @@ function kuiTick(now){
     case 'reach':if(!k.tgt||k.tgt.plugin.gone){k.phase='back';k.t0=now;break}look();k.tongue=Math.min(1,t/750);if(k.tongue>=1)kuiEat(now);break;
     case 'back':if(k.carry){k.carry.p.amp=Math.max(k.carry.p.amp*.95,.18);k.carry.p.ph+=.5*dt}k.tongue=Math.max(0,k.tongue-(k.carry?.022:.06)*dt);if(k.tongue<=0){if(k.carry)kuiGulp(now);if(k.eaten.length>=KUI_MAX_EAT)kuiGo('burp',now);else{k.phase='warn';k.t0=now;k.tgt=kuiPick();if(!k.tgt)kuiGo('leave',now)}}break;
     case 'burp':if(t>1000)kuiGo('leave',now);break;
-    case 'leave':case 'flee':{k.tongue=Math.max(0,k.tongue-.1*dt);const f=k.phase==='flee';k.x+=k.side*(f?7:2.5)*dt;if(f)k.y=J.y+k.r*2-Math.abs(Math.sin(t/90))*k.r*.5;
+    case 'grin':if(t>1500)kuiGo('leave',now);break;
+    case 'leave':case 'flee':{k.tongue=Math.max(0,k.tongue-.1*dt);const f=k.phase==='flee';k.x+=k.side*(f?7:2.5)*dt;if(f)k.y=J.y+k.r*1.25+18-Math.abs(Math.sin(t/90))*k.r*.5;
       if(Math.abs(k.x-(J.x+J.w/2))>J.w/2+k.r*1.3){kui=null;nextKui=now+30000+Math.random()*15000}}break;
   }
 }
@@ -779,10 +792,16 @@ function drawKui(now){const k=kui;if(!k)return;
   const hit=now-k.hitT<220,ex=r*.3,ey=-r*.08,es=r*.17;let lx=0,ly=0;
   if(k.tx||k.ty){const dx=k.tx-k.x,dy=k.ty-k.y,d=Math.hypot(dx,dy)||1;lx=dx/d*es*.45;ly=dy/d*es*.45}
   ctx.strokeStyle='#fff';ctx.lineWidth=Math.max(1.6,r*.07);ctx.lineCap='round';
-  if(hit){ctx.beginPath();[-1,1].forEach(sd=>{ctx.moveTo(sd*ex-sd*es*.6,ey-es*.6);ctx.lineTo(sd*ex+sd*es*.5,ey);ctx.lineTo(sd*ex-sd*es*.6,ey+es*.6)});ctx.stroke()}
+  if(k.grin){ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(-ex,ey,es,0,7);ctx.arc(ex,ey,es,0,7);ctx.fill();
+    ctx.fillStyle='#d4304f';ctx.beginPath();ctx.arc(-ex,ey+es*.3,es*.5,0,7);ctx.arc(ex,ey+es*.3,es*.5,0,7);ctx.fill();
+    ctx.fillStyle='#231b30';[-1,1].forEach(sd=>{ctx.beginPath();ctx.moveTo(sd*ex-es*1.2,ey-es*1.3);ctx.lineTo(sd*ex+es*1.2,ey-es*1.3);ctx.lineTo(sd*ex+es*1.2,ey+sd*es*.15);ctx.lineTo(sd*ex-es*1.2,ey-sd*es*.15);ctx.fill()});
+    ctx.strokeStyle='#0b0810';ctx.lineWidth=Math.max(2,r*.08);ctx.beginPath();ctx.moveTo(-ex-es*1.2,ey+es*.15);ctx.lineTo(-ex+es*1.2,ey-es*.15);ctx.moveTo(ex-es*1.2,ey-es*.15);ctx.lineTo(ex+es*1.2,ey+es*.15);ctx.stroke()}
+  else if(hit){ctx.beginPath();[-1,1].forEach(sd=>{ctx.moveTo(sd*ex-sd*es*.6,ey-es*.6);ctx.lineTo(sd*ex+sd*es*.5,ey);ctx.lineTo(sd*ex-sd*es*.6,ey+es*.6)});ctx.stroke()}
   else{ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(-ex,ey,es,0,7);ctx.arc(ex,ey,es,0,7);ctx.fill();
     ctx.fillStyle='#d4304f';ctx.beginPath();ctx.arc(-ex+lx,ey+ly,es*.5,0,7);ctx.arc(ex+lx,ey+ly,es*.5,0,7);ctx.fill();
     ctx.strokeStyle='#0b0810';ctx.lineWidth=Math.max(2,r*.09);ctx.beginPath();ctx.moveTo(-ex-es*1.1,ey-es*1.5);ctx.lineTo(-ex+es*.8,ey-es*.9);ctx.moveTo(ex+es*1.1,ey-es*1.5);ctx.lineTo(ex-es*.8,ey-es*.9);ctx.stroke()}
+  if(k.grin){ctx.fillStyle='#0b0810';ctx.beginPath();ctx.moveTo(-r*.42,r*.16);ctx.quadraticCurveTo(-r*.05,r*.62,r*.46,r*.06);ctx.quadraticCurveTo(r*.05,r*.36,-r*.42,r*.16);ctx.fill();
+    ctx.fillStyle='#fff';ctx.beginPath();[[-.2,.24],[.18,.22]].forEach(([fx,fy])=>{ctx.moveTo((fx-.05)*r,fy*r);ctx.lineTo((fx+.05)*r,(fy-.02)*r);ctx.lineTo(fx*r,(fy+.12)*r)});ctx.fill();ctx.restore();return}
   const open=k.phase==='reach'||k.tongue>0||k.phase==='burp'||gb>.3;
   ctx.fillStyle='#0b0810';ctx.beginPath();if(open)ctx.ellipse(0,r*.32,r*.22,r*.16,0,0,7);else ctx.ellipse(0,r*.3,r*.24,r*.07,0,0,7);ctx.fill();
   ctx.fillStyle='#fff';ctx.beginPath();[-1,1].forEach(sd=>{const fx=sd*r*.11,fy=open?r*.18:r*.25;ctx.moveTo(fx-r*.05,fy);ctx.lineTo(fx+r*.05,fy);ctx.lineTo(fx,fy+r*.11)});ctx.fill();

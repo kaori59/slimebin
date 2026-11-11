@@ -709,11 +709,10 @@ let kui=null,nextKui=0;
 const KUI_TAPS=5,KUI_MAX_EAT=3;
 function kuiReset(){kui=null;nextKui=performance.now()+20000}
 function kuiPick(){
-  const c=slimes.filter(s=>!s.plugin.gone&&s.plugin.lv>0&&s.plugin.lv<MAX&&!(grab&&grab.body===s));if(!c.length)return null;
-  const any=a=>a[Math.floor(Math.random()*a.length)];
-  if(Math.random()<.25){const top=Math.max(...c.map(s=>s.plugin.lv));return any(c.filter(s=>s.plugin.lv===top))}
-  const low=Math.min(...c.map(s=>s.plugin.lv));return any(c.filter(s=>s.plugin.lv<=low+1))}
-function spawnKui(){const side=Math.random()<.5?-1:1,r=J.w*.085;
+  // always goes for the most valuable slime in the jar (rainbows included)
+  const c=slimes.filter(s=>!s.plugin.gone&&s.plugin.lv>0&&!(grab&&grab.body===s));if(!c.length)return null;
+  const top=Math.max(...c.map(s=>s.plugin.lv)),a=c.filter(s=>s.plugin.lv===top);return a[Math.floor(Math.random()*a.length)]}
+function spawnKui(){const side=Math.random()<.5?-1:1,r=J.w*.105;
   kui={side,r,x:side<0?J.x-r:J.x+J.w+r,x0:side<0?J.x-r:J.x+J.w+r,hx:side<0?J.x+r*1.25:J.x+J.w-r*1.25,y:J.y+r*2,lt:performance.now(),phase:'in',t0:performance.now(),hits:0,hitT:0,eaten:[],tgt:null,tongue:0,tx:0,ty:0,amp:.3,ph:0};
   sSquish(160,80,.55,.22,8);toast('くいしんぼが来た！ タップで追いはらおう')}
 function kuiGo(ph,now){const k=kui;k.phase=ph;k.t0=now;k.tgt=null;

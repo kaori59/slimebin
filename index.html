@@ -686,7 +686,7 @@ document.getElementById('go').addEventListener('click',()=>{
   audio();if(ac&&ac.state==='suspended')ac.resume();
   started=true;$start.hidden=true;$end.hidden=false;hiAtStart=rec.hi;
   [...slimes].forEach(removeSlime);particles=[];floats=[];
-  feverUntil=0;feverWas=false;feverPts=0;bigs=[];confs=[];goos=[];strands=[];rings=[];ghosts=[];beadShown=0;beadPops=[];charge=0;rapidReady=false;rapidUntil=0;rapidHold=false;rapidWas=false;score=0;$score.textContent='0';$score.parentNode.classList.remove('long');combo=0;lastMergeT=0;recPending=false;drops=0;rollNext();
+  feverUntil=0;feverWas=false;feverPts=0;bigs=[];confs=[];goos=[];strands=[];rings=[];ghosts=[];beadShown=0;beadPops=[];charge=0;rapidReady=false;rapidUntil=0;rapidHold=false;rapidWas=false;kuiReset();score=0;$score.textContent='0';$score.parentNode.classList.remove('long');combo=0;lastMergeT=0;recPending=false;drops=0;rollNext();
   floats.push({x:J.x+J.w/2,y:J.y+J.h*.42,text:'スタート！',sub:'',life:1,big:true,rainbow:true,fast:true});
   [523,784,1047].forEach((f,i)=>tone('triangle',f,f,f,.22,.16,i*.08));
 });
@@ -696,13 +696,96 @@ muteBtn.addEventListener('click',()=>{rec.muted=!rec.muted;saveRec();showRec()})
 $end.addEventListener('click',()=>{if(!started)return;grab=null;press=null;rapidHold=false;$quit.hidden=false;document.getElementById('quitNo').focus()});
 document.getElementById('quitNo').addEventListener('click',()=>{$quit.hidden=true});
 document.getElementById('quitYes').addEventListener('click',()=>{
-  $quit.hidden=true;started=false;$end.hidden=true;feverUntil=0;bigs=[];rapidUntil=0;rapidReady=false;rapidHold=false;
+  $quit.hidden=true;started=false;$end.hidden=true;kui=null;nextKui=0;feverUntil=0;bigs=[];rapidUntil=0;rapidReady=false;rapidHold=false;
   document.getElementById('final').textContent=score.toLocaleString();
   document.getElementById('newhi').hidden=!(score>0&&score>hiAtStart);
   $result.hidden=false;[784,659,523,784].forEach((f,i)=>tone('triangle',f,f,f,.25,.14,i*.12));
   document.getElementById('again').focus()});
 document.getElementById('again').addEventListener('click',()=>{
   $result.hidden=true;document.getElementById('startHi').textContent=rec.hi.toLocaleString();document.getElementById('startMc').textContent=rec.maxCombo||0;$start.hidden=false});
+
+/* ---------- くいしんぼ: a black slime that sometimes sneaks in to eat slimes; tap it to chase it off ---------- */
+let kui=null,nextKui=0;
+const KUI_TAPS=5,KUI_MAX_EAT=3;
+function kuiReset(){kui=null;nextKui=performance.now()+60000}
+function kuiPick(){
+  const c=slimes.filter(s=>!s.plugin.gone&&s.plugin.lv>0&&s.plugin.lv<MAX&&!(grab&&grab.body===s));if(!c.length)return null;
+  const any=a=>a[Math.floor(Math.random()*a.length)];
+  if(Math.random()<.25){const top=Math.max(...c.map(s=>s.plugin.lv));return any(c.filter(s=>s.plugin.lv===top))}
+  const low=Math.min(...c.map(s=>s.plugin.lv));return any(c.filter(s=>s.plugin.lv<=low+1))}
+function spawnKui(){const side=Math.random()<.5?-1:1,r=J.w*.085;
+  kui={side,r,x:side<0?J.x-r:J.x+J.w+r,x0:side<0?J.x-r:J.x+J.w+r,hx:side<0?J.x+r*1.25:J.x+J.w-r*1.25,y:J.y+r*2,lt:performance.now(),phase:'in',t0:performance.now(),hits:0,hitT:0,eaten:[],tgt:null,tongue:0,tx:0,ty:0,amp:.3,ph:0};
+  sSquish(160,80,.55,.22,8);toast('くいしんぼが来た！ タップで追いはらおう')}
+function kuiGo(ph,now){const k=kui;k.phase=ph;k.t0=now;k.tgt=null;
+  if(ph==='burp'){k.amp=.4;floats.push({x:k.x,y:k.y-k.r,text:'げっぷ',sub:'まんぷく…',life:1});sSquish(110,60,.5,.28,22)}}
+function kuiEat(now){const k=kui,s=k.tgt;if(!s||s.plugin.gone){k.phase='back';k.t0=now;return}
+  const px=s.position.x,py=s.position.y,lv=s.plugin.lv;
+  if(grab&&grab.body===s)grab=null;if(press&&press.body===s){clearTimeout(press.timer);press=null}
+  removeSlime(s);k.eaten.push(lv);k.r*=1.08;k.amp=.32;k.tgt=null;k.phase='back';k.t0=now;
+  burst(px,py,LV[lv].c,10,R(lv));sSquish(240,70,.35,.25,14);sWet(900,200,.25,.15,.05);shake(120,2);
+  floats.push({x:px,y:py-10,text:'ぱくっ！',sub:'',life:1})}
+function kuiHit(p){const k=kui;if(!k||k.phase==='flee'||k.phase==='leave'||k.phase==='burp')return false;
+  if(Math.hypot(p.x-k.x,p.y-k.y)>k.r*1.4)return false;
+  k.hits++;k.amp=.38;k.hitT=performance.now();sSquish(300+k.hits*45,150,.18,.22,20);burst(p.x,p.y,'#4a3d5c',6,k.r*.5);
+  if(k.phase==='reach'){k.phase='back';k.t0=performance.now()}
+  if(k.hits>=KUI_TAPS){const x=k.x,back=k.eaten.slice();kuiGo('flee',performance.now());
+    const pts=500;addScore(pts);floats.push({x,y:k.y+k.r*.5,text:`+${pts}`,sub:back.length?'おいはらった！ かえしてくれた':'おいはらった！',life:1,big:true});
+    back.forEach((lv,i)=>setTimeout(()=>{if(started)addSlime(lv,x+(Math.random()-.5)*20,J.y+R(lv)+6)},250+i*200));
+    [660,880,1175].forEach((f,i)=>tone('triangle',f,f,f,.2,.14,i*.07));confetti(x,k.y,12,5)}
+  return true}
+function kuiTick(now){
+  if(!started){kui=null;return}
+  if(!kui){if(nextKui&&now>nextKui){if(fever()||rapidOn()||slimes.length<4)nextKui=now+8000;else spawnKui()}return}
+  const k=kui,t=now-k.t0,dt=Math.min(50,now-k.lt)/16.7;k.lt=now;k.amp*=Math.pow(.93,dt);k.ph+=.22*dt;
+  if(fever()&&k.phase!=='flee'&&k.phase!=='leave')kuiGo('leave',now);
+  const look=()=>{if(k.tgt&&!k.tgt.plugin.gone){k.tx=k.tgt.position.x;k.ty=k.tgt.position.y}};
+  switch(k.phase){
+    case 'in':{const e=Math.min(1,t/450);k.x=k.x0+(k.hx-k.x0)*(1-Math.pow(1-e,3))}if(t>650){k.phase='warn';k.t0=now;k.tgt=kuiPick();if(!k.tgt)kuiGo('leave',now)}break;
+    case 'warn':if(!k.tgt||k.tgt.plugin.gone){k.tgt=kuiPick();if(!k.tgt){kuiGo('leave',now);break}}look();
+      if(t>(k.eaten.length?1500:2200)){k.phase='reach';k.t0=now;sWet(500,1500,.4,.12)}break;
+    case 'reach':if(!k.tgt||k.tgt.plugin.gone){k.phase='back';k.t0=now;break}look();k.tongue=Math.min(1,t/750);if(k.tongue>=1)kuiEat(now);break;
+    case 'back':k.tongue=Math.max(0,k.tongue-.06*dt);if(k.tongue<=0){if(k.eaten.length>=KUI_MAX_EAT)kuiGo('burp',now);else{k.phase='warn';k.t0=now;k.tgt=kuiPick();if(!k.tgt)kuiGo('leave',now)}}break;
+    case 'burp':if(t>1000)kuiGo('leave',now);break;
+    case 'leave':case 'flee':{k.tongue=Math.max(0,k.tongue-.1*dt);const f=k.phase==='flee';k.x+=k.side*(f?7:2.5)*dt;if(f)k.y=J.y+k.r*2-Math.abs(Math.sin(t/90))*k.r*.5;
+      if(Math.abs(k.x-(J.x+J.w/2))>J.w/2+k.r*1.3){kui=null;nextKui=now+60000+Math.random()*30000}}break;
+  }
+}
+function drawKui(now){const k=kui;if(!k)return;
+  ctx.save();rr(J.x-2,J.y-6,J.w+4,J.h+12,44);ctx.clip();
+  // the slime it is aiming at
+  if((k.phase==='warn'||k.phase==='reach')&&k.tgt&&!k.tgt.plugin.gone){const s=k.tgt,rr2=s.plugin.r+5+Math.sin(now/120)*2;
+    ctx.save();ctx.setLineDash([5,5]);ctx.lineDashOffset=-now/40;ctx.strokeStyle='#5b2a6e';ctx.globalAlpha=.75;ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(s.position.x,s.position.y,rr2,0,7);ctx.stroke();ctx.restore()}
+  const r=k.r,mx=k.x-k.side*r*.05,my=k.y+r*.3;
+  // tongue
+  if(k.tongue>0){const ex=mx+(k.tx-mx)*k.tongue,ey=my+(k.ty-my)*k.tongue,mid={x:(mx+ex)/2+Math.sin(now/90)*6,y:(my+ey)/2};
+    ctx.strokeStyle='#c2457a';ctx.lineCap='round';ctx.lineWidth=Math.max(5,r*.28);ctx.beginPath();ctx.moveTo(mx,my);ctx.quadraticCurveTo(mid.x,mid.y,ex,ey);ctx.stroke();
+    ctx.fillStyle='#e0648f';ctx.beginPath();ctx.arc(ex,ey,Math.max(5,r*.22),0,7);ctx.fill()}
+  // body
+  ctx.translate(k.x,k.y);const sq=k.phase==='burp'?1+.12*Math.sin(now/60):1;ctx.scale(sq,1/sq);
+  ctx.beginPath();for(let i=0;i<=30;i++){const a=i/30*6.283,q=1+k.amp*(.55*Math.sin(3*a+k.ph)+.35*Math.sin(5*a-k.ph*1.3))+.025*Math.sin(now/300+a*3);
+    const px=Math.cos(a)*r*q,py=Math.sin(a)*r*q*.94;i?ctx.lineTo(px,py):ctx.moveTo(px,py)}ctx.closePath();
+  const g=ctx.createRadialGradient(-r*.35,-r*.42,r*.08,0,0,r*1.05);g.addColorStop(0,'#6e5f86');g.addColorStop(.55,'#2e2540');g.addColorStop(1,'#14101c');ctx.fillStyle=g;ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,.45)';ctx.beginPath();ctx.ellipse(-r*.38,-r*.45,r*.22,r*.1,-.6,0,7);ctx.fill();
+  // face: angry brows, eyes looking at the target, fangs
+  const hit=now-k.hitT<220,ex=r*.3,ey=-r*.08,es=r*.17;let lx=0,ly=0;
+  if(k.tx||k.ty){const dx=k.tx-k.x,dy=k.ty-k.y,d=Math.hypot(dx,dy)||1;lx=dx/d*es*.45;ly=dy/d*es*.45}
+  ctx.strokeStyle='#fff';ctx.lineWidth=Math.max(1.6,r*.07);ctx.lineCap='round';
+  if(hit){ctx.beginPath();[-1,1].forEach(sd=>{ctx.moveTo(sd*ex-sd*es*.6,ey-es*.6);ctx.lineTo(sd*ex+sd*es*.5,ey);ctx.lineTo(sd*ex-sd*es*.6,ey+es*.6)});ctx.stroke()}
+  else{ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(-ex,ey,es,0,7);ctx.arc(ex,ey,es,0,7);ctx.fill();
+    ctx.fillStyle='#d4304f';ctx.beginPath();ctx.arc(-ex+lx,ey+ly,es*.5,0,7);ctx.arc(ex+lx,ey+ly,es*.5,0,7);ctx.fill();
+    ctx.strokeStyle='#0b0810';ctx.lineWidth=Math.max(2,r*.09);ctx.beginPath();ctx.moveTo(-ex-es*1.1,ey-es*1.5);ctx.lineTo(-ex+es*.8,ey-es*.9);ctx.moveTo(ex+es*1.1,ey-es*1.5);ctx.lineTo(ex-es*.8,ey-es*.9);ctx.stroke()}
+  const open=k.phase==='reach'||k.tongue>0||k.phase==='burp';
+  ctx.fillStyle='#0b0810';ctx.beginPath();if(open)ctx.ellipse(0,r*.32,r*.22,r*.16,0,0,7);else ctx.ellipse(0,r*.3,r*.24,r*.07,0,0,7);ctx.fill();
+  ctx.fillStyle='#fff';ctx.beginPath();[-1,1].forEach(sd=>{const fx=sd*r*.11,fy=open?r*.18:r*.25;ctx.moveTo(fx-r*.05,fy);ctx.lineTo(fx+r*.05,fy);ctx.lineTo(fx,fy+r*.11)});ctx.fill();
+  ctx.restore();
+}
+function drawKuiTop(now){const k=kui;if(!k)return;const r=k.r;
+  // "!" warning and tap pips, drawn over the jar's cloth cap
+  if(k.phase==='warn'||k.phase==='in'){const by=k.y-r*1.55+Math.sin(now/110)*3;ctx.save();ctx.textAlign='center';ctx.font=`900 ${Math.round(r*.9)}px ${FONT}`;ctx.lineWidth=5;ctx.lineJoin='round';
+    ctx.strokeStyle='#fff';ctx.fillStyle='#d4304f';ctx.strokeText('！',k.x,by);ctx.fillText('！',k.x,by);ctx.restore()}
+  if(k.hits>0&&k.phase!=='flee'&&k.phase!=='leave'){for(let i=0;i<KUI_TAPS;i++){const px=k.x+(i-(KUI_TAPS-1)/2)*r*.32,py=k.y+r*1.25;
+    ctx.fillStyle=i<k.hits?'#ff8a3d':'rgba(255,255,255,.75)';ctx.strokeStyle='#5b2a6e';ctx.lineWidth=1.2;ctx.beginPath();ctx.arc(px,py,r*.1,0,7);ctx.fill();ctx.stroke()}}
+}
 
 /* ---------- touch: tap empty space to drop, hold a slime and pull to fling ---------- */
 let grab=null,press=null;const ptr={x:0,y:0};
@@ -712,6 +795,7 @@ stage.addEventListener('pointerdown',e=>{
   if(!started)return;
   audio();if(ac&&ac.state==='suspended')ac.resume();try{stage.setPointerCapture(e.pointerId)}catch(_){}
   const p=pos(e);ptr.x=p.x;ptr.y=p.y;aimX=p.x;
+  if(kuiHit(p)){press=null;return}
   if(!fever()&&(rapidReady||rapidOn())){if(rapidReady)startRapid();rapidHold=true;press=null;return}
   const hit=Query.point(slimes,p)[0];
   if(hit){press={body:hit,x:p.x,y:p.y,id:e.pointerId,timer:setTimeout(()=>{if(press&&!hit.plugin.gone){startGrab(hit);press=null}},170)}}
@@ -811,7 +895,7 @@ function frame(now){
   const dt=Math.min(50,now-lastT);lastT=now;acc+=dt;let steps=0;
   while(acc>=16.667&&steps<3){Engine.update(engine,16.667);acc-=16.667;steps++}if(steps===3)acc=0;
   const ts=engine.timing.timeScale;
-  feverTick(now);rapidTick(now);
+  feverTick(now);rapidTick(now);kuiTick(now);
   if(recPending&&now-lastMergeT>1300){recPending=false;celebrateRecord(rec.maxCombo)}
   ctx.clearRect(0,0,W,H);
   ctx.save();if(now<shakeUntil){const k=(shakeUntil-now)/420*shakeAmp;ctx.translate((Math.random()-.5)*k*2,(Math.random()-.5)*k*2)}
@@ -837,6 +921,7 @@ function frame(now){
     let st=null;if(grab&&grab.body===s){const dx=ptr.x-s.position.x,dy=ptr.y-s.position.y,d=Math.hypot(dx,dy);st={a:Math.atan2(dy,dx),s:Math.min(.3,d/J.w*.6)}}
     drawSlime(s.position.x,s.position.y,p.lv,p,s.velocity,st,now,false);
   }
+  drawKui(now);
   // particles
   for(const q of particles){q.x+=q.vx*ts;q.y+=q.vy*ts;q.vy+=.12*gsign()*ts;q.life-=.025*ts;ctx.globalAlpha=Math.max(0,q.life);ctx.fillStyle=q.c;ctx.beginPath();ctx.arc(q.x,q.y,q.size,0,7);ctx.fill()}
   ctx.globalAlpha=1;particles=particles.filter(q=>q.life>0);
@@ -850,7 +935,7 @@ function frame(now){
     ctx.strokeText(f.text,f.x,f.y);ctx.fillText(f.text,f.x,f.y);
     if(f.sub){ctx.font=`800 ${Math.round(12*sc)}px ${FONT}`;ctx.lineWidth=4;ctx.strokeText(f.sub,f.x,f.y+16*sc);ctx.fillText(f.sub,f.x,f.y+16*sc)}}
   ctx.globalAlpha=1;floats=floats.filter(f=>f.life>0);
-  drawJarFront(now);drawRapidGauge(now);
+  drawJarFront(now);drawKuiTop(now);drawRapidGauge(now);
   for(const sp of bigs)drawBig(sp,now);drawGoo(now,ts);bigs=bigs.filter(sp=>!sp.fired&&(now-sp.t0)<3000);
   for(const q of confs){q.vx+=Math.sin(now/300+q.ph)*.02;q.vx*=.96;q.vy*=.985;q.vy-=.03*gsign();q.x+=q.vx*ts;q.y+=q.vy*ts;q.life-=.006*ts;
     const a=Math.max(0,Math.min(1,q.life));ctx.globalAlpha=a*.7;

@@ -715,7 +715,7 @@ document.getElementById('again').addEventListener('click',()=>{
 
 /* ---------- くいしんぼ: a black slime that sometimes sneaks in to eat slimes; tap it to chase it off ---------- */
 let kui=null,nextKui=0;
-const KUI_TAPS=5,KUI_MAX_EAT=3;
+const KUI_TAPS=20,KUI_MAX_EAT=3,KUI_FREE=6;
 function kuiReset(){kui=null;nextKui=performance.now()+20000}
 function kuiPick(){
   // always goes for the most valuable slime in the jar (rainbows included)
@@ -723,7 +723,7 @@ function kuiPick(){
   const top=Math.max(...c.map(s=>s.plugin.lv)),a=c.filter(s=>s.plugin.lv===top);return a[Math.floor(Math.random()*a.length)]}
 function spawnKui(){const side=Math.random()<.5?-1:1,r=J.w*.105;
   kui={side,r,r0:r,rT:r,x:side<0?J.x-r:J.x+J.w+r,x0:side<0?J.x-r:J.x+J.w+r,hx:side<0?J.x+r*1.25:J.x+J.w-r*1.25,y:J.y+r*1.25+18,lt:performance.now(),phase:'in',t0:performance.now(),hits:0,hitT:0,eaten:[],tgt:null,tongue:0,tx:0,ty:0,amp:.3,ph:0};
-  sSquish(160,80,.55,.22,8);toast('くいしんぼが来た！ タップで追いはらおう')}
+  sSquish(160,80,.55,.22,8);toast('くいしんぼが来た！ 連打で追いはらおう')}
 function kuiGo(ph,now){const k=kui;if(ph==='leave'&&k.eaten.length&&k.phase!=='grin'&&!fever())ph='grin';k.phase=ph;k.t0=now;k.tgt=null;
   if(k.carry&&(ph==='leave'||ph==='burp'))kuiGulp(now);
   if(ph==='grin'){k.grin=true;k.tx=k.ty=0;floats.push({x:k.x,y:k.y-k.r*1.1,text:'ニヤリ',sub:'',life:1,big:true});[0,.16,.32].forEach((d,i)=>tone('sawtooth',196-i*12,190-i*12,170-i*12,.13,.07,d))}
@@ -731,7 +731,7 @@ function kuiGo(ph,now){const k=kui;if(ph==='leave'&&k.eaten.length&&k.phase!=='g
 function kuiEat(now){const k=kui,s=k.tgt;if(!s||s.plugin.gone){k.phase='back';k.t0=now;return}
   const px=s.position.x,py=s.position.y,lv=s.plugin.lv;
   if(grab&&grab.body===s)grab=null;if(press&&press.body===s){clearTimeout(press.timer);press=null}
-  removeSlime(s);k.tx=px;k.ty=py;k.carry={lv,p:{r:R(lv),amp:.35,ph:Math.random()*6}};k.tgt=null;k.phase='back';k.t0=now;
+  removeSlime(s);k.tx=px;k.ty=py;k.carry={lv,p:{r:R(lv),amp:.35,ph:Math.random()*6},tug:0};k.tgt=null;k.phase='back';k.t0=now;
   burst(px,py,LV[lv].c,6,R(lv)*.6);sWet(1200,400,.18,.16);sSquish(380,520,.25,.14,30,.05);
   floats.push({x:px,y:py-10,text:'つかまった！',sub:'',life:1})}
 function kuiGulp(now){const k=kui,c=k.carry;if(!c)return;k.carry=null;k.eaten.push(c.lv);k.rT=k.r0*(1+.55*k.eaten.length);k.amp=.5;k.gulpT=now;
@@ -739,12 +739,13 @@ function kuiGulp(now){const k=kui,c=k.carry;if(!c)return;k.carry=null;k.eaten.pu
   floats.push({x:k.x,y:k.y+k.r*1.6,text:'ごっくん',sub:'',life:1})}
 function kuiDrop(){const k=kui,c=k&&k.carry;if(!c)return;k.carry=null;
   const ex=k.x+(k.tx-k.x)*k.tongue,ey=k.y+(k.ty-k.y)*k.tongue,b=addSlime(c.lv,ex,ey);b.plugin.amp=.32;
-  floats.push({x:ex,y:ey-12,text:'たすかった！',sub:'',life:1})}
+  floats.push({x:ex,y:ey-12,text:'たすかった！',sub:'',life:1});
+  k.madT=performance.now();k.amp=.45;floats.push({x:k.x,y:k.y-k.r*1.15,text:'ムキーッ！',sub:'',life:1});
+  [0,.09,.18].forEach(d=>tone('sawtooth',150,170,120,.1,.07,d))}
 function kuiHit(p){const k=kui;if(!k||k.phase==='flee'||k.phase==='leave'||k.phase==='burp')return false;
   if(Math.hypot(p.x-k.x,p.y-k.y)>k.r*1.4)return false;
-  k.hits++;k.amp=.38;k.hitT=performance.now();sSquish(300+k.hits*45,150,.18,.22,20);burst(p.x,p.y,'#4a3d5c',6,k.r*.5);
-  if(k.phase==='reach'){k.phase='back';k.t0=performance.now()}
-  if(k.carry)kuiDrop();
+  k.hits++;k.amp=.38;k.hitT=performance.now();sSquish(300+Math.min(k.hits,16)*30,150,.18,.22,20);burst(p.x,p.y,'#4a3d5c',6,k.r*.5);
+  if(k.carry){k.carry.tug++;k.tongue=Math.min(1,k.tongue+.09);k.carry.p.amp=.4;if(k.carry.tug>=KUI_FREE)kuiDrop()}
   if(k.hits>=KUI_TAPS){const x=k.x,back=k.eaten.slice();kuiGo('flee',performance.now());
     const pts=500;addScore(pts);floats.push({x,y:k.y+k.r*.5,text:`+${pts}`,sub:back.length?'おいはらった！ かえしてくれた':'おいはらった！',life:1,big:true});
     back.forEach((lv,i)=>setTimeout(()=>{if(started)addSlime(lv,x+(Math.random()-.5)*20,J.y+R(lv)+6)},250+i*200));
@@ -763,7 +764,7 @@ function kuiTick(now){
     case 'warn':if(!k.tgt||k.tgt.plugin.gone){k.tgt=kuiPick();if(!k.tgt){kuiGo('leave',now);break}}look();
       if(t>(k.eaten.length?1500:2200)){k.phase='reach';k.t0=now;sWet(500,1500,.4,.12)}break;
     case 'reach':if(!k.tgt||k.tgt.plugin.gone){k.phase='back';k.t0=now;break}look();k.tongue=Math.min(1,t/750);if(k.tongue>=1)kuiEat(now);break;
-    case 'back':if(k.carry){k.carry.p.amp=Math.max(k.carry.p.amp*.95,.18);k.carry.p.ph+=.5*dt}k.tongue=Math.max(0,k.tongue-(k.carry?.022:.06)*dt);if(k.tongue<=0){if(k.carry)kuiGulp(now);if(k.eaten.length>=KUI_MAX_EAT)kuiGo('burp',now);else{k.phase='warn';k.t0=now;k.tgt=kuiPick();if(!k.tgt)kuiGo('leave',now)}}break;
+    case 'back':if(k.carry){k.carry.p.amp=Math.max(k.carry.p.amp*.95,.18);k.carry.p.ph+=.5*dt}k.tongue=Math.max(0,k.tongue-(k.carry?.015:.06)*dt);if(k.tongue<=0){if(k.carry)kuiGulp(now);if(k.eaten.length>=KUI_MAX_EAT)kuiGo('burp',now);else{k.phase='warn';k.t0=now;k.tgt=kuiPick();if(!k.tgt)kuiGo('leave',now)}}break;
     case 'burp':if(t>1000)kuiGo('leave',now);break;
     case 'grin':if(t>1500)kuiGo('leave',now);break;
     case 'leave':case 'flee':{k.tongue=Math.max(0,k.tongue-.1*dt);const f=k.phase==='flee';k.x+=k.side*(f?7:2.5)*dt;if(f)k.y=J.y+k.r*1.25+18-Math.abs(Math.sin(t/90))*k.r*.5;
@@ -796,6 +797,19 @@ function drawKui(now){const k=kui;if(!k)return;
     ctx.fillStyle='#d4304f';ctx.beginPath();ctx.arc(-ex,ey+es*.3,es*.5,0,7);ctx.arc(ex,ey+es*.3,es*.5,0,7);ctx.fill();
     ctx.fillStyle='#231b30';[-1,1].forEach(sd=>{ctx.beginPath();ctx.moveTo(sd*ex-es*1.2,ey-es*1.3);ctx.lineTo(sd*ex+es*1.2,ey-es*1.3);ctx.lineTo(sd*ex+es*1.2,ey+sd*es*.15);ctx.lineTo(sd*ex-es*1.2,ey-sd*es*.15);ctx.fill()});
     ctx.strokeStyle='#0b0810';ctx.lineWidth=Math.max(2,r*.08);ctx.beginPath();ctx.moveTo(-ex-es*1.2,ey+es*.15);ctx.lineTo(-ex+es*1.2,ey-es*.15);ctx.moveTo(ex-es*1.2,ey-es*.15);ctx.lineTo(ex+es*1.2,ey+es*.15);ctx.stroke()}
+  else if(now-(k.madT||-1e9)<1300){const jx=Math.sin(now/25)*r*.03;ctx.translate(jx,0);
+    ctx.fillStyle='rgba(255,60,80,.35)';ctx.beginPath();ctx.ellipse(-ex*1.5,r*.12,r*.14,r*.08,0,0,7);ctx.ellipse(ex*1.5,r*.12,r*.14,r*.08,0,0,7);ctx.fill();
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(-ex,ey,es,0,7);ctx.arc(ex,ey,es,0,7);ctx.fill();
+    ctx.fillStyle='#d4304f';ctx.beginPath();ctx.arc(-ex,ey+es*.15,es*.32,0,7);ctx.arc(ex,ey+es*.15,es*.32,0,7);ctx.fill();
+    ctx.fillStyle='#14101c';[-1,1].forEach(sd=>{ctx.beginPath();ctx.moveTo(sd*ex-sd*es*1.3,ey-es*1.6);ctx.lineTo(sd*ex+sd*es*1.2,ey-es*.2);ctx.lineTo(sd*ex+sd*es*1.2,ey-es*1.6);ctx.fill()});
+    ctx.strokeStyle='#0b0810';ctx.lineWidth=Math.max(2.5,r*.1);ctx.beginPath();ctx.moveTo(-ex-es*1.3,ey-es*1.6);ctx.lineTo(-ex+es*1.2,ey-es*.2);ctx.moveTo(ex+es*1.3,ey-es*1.6);ctx.lineTo(ex-es*1.2,ey-es*.2);ctx.stroke();
+    // gritted teeth
+    const mw=r*.32,mt=r*.2,mb=r*.4;ctx.fillStyle='#fff';ctx.strokeStyle='#0b0810';ctx.lineWidth=Math.max(1.5,r*.05);ctx.beginPath();ctx.rect(-mw,mt,mw*2,mb-mt);ctx.fill();ctx.stroke();
+    ctx.beginPath();ctx.moveTo(-mw,(mt+mb)/2);ctx.lineTo(mw,(mt+mb)/2);for(let i=1;i<4;i++){const xx=-mw+mw*2*i/4;ctx.moveTo(xx,mt);ctx.lineTo(xx,mb)}ctx.stroke();
+    // anger mark
+    ctx.strokeStyle='#ff3b55';ctx.lineWidth=Math.max(2.5,r*.08);const ax=r*.55,ay=-r*.62,as=r*.16;ctx.beginPath();
+    [[1,1],[1,-1],[-1,1],[-1,-1]].forEach(([u,v])=>{ctx.moveTo(ax+u*as*.35,ay+v*as);ctx.quadraticCurveTo(ax+u*as*.3,ay+v*as*.3,ax+u*as,ay+v*as*.35)});ctx.stroke();
+    ctx.restore();return}
   else if(hit){ctx.beginPath();[-1,1].forEach(sd=>{ctx.moveTo(sd*ex-sd*es*.6,ey-es*.6);ctx.lineTo(sd*ex+sd*es*.5,ey);ctx.lineTo(sd*ex-sd*es*.6,ey+es*.6)});ctx.stroke()}
   else{ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(-ex,ey,es,0,7);ctx.arc(ex,ey,es,0,7);ctx.fill();
     ctx.fillStyle='#d4304f';ctx.beginPath();ctx.arc(-ex+lx,ey+ly,es*.5,0,7);ctx.arc(ex+lx,ey+ly,es*.5,0,7);ctx.fill();
@@ -811,8 +825,9 @@ function drawKuiTop(now){const k=kui;if(!k)return;const r=k.r;
   // "!" warning and tap pips, drawn over the jar's cloth cap
   if(k.phase==='warn'||k.phase==='in'){const by=k.y-r*1.55+Math.sin(now/110)*3;ctx.save();ctx.textAlign='center';ctx.font=`900 ${Math.round(r*.9)}px ${FONT}`;ctx.lineWidth=5;ctx.lineJoin='round';
     ctx.strokeStyle='#fff';ctx.fillStyle='#d4304f';ctx.strokeText('！',k.x,by);ctx.fillText('！',k.x,by);ctx.restore()}
-  if(k.hits>0&&k.phase!=='flee'&&k.phase!=='leave'){for(let i=0;i<KUI_TAPS;i++){const px=k.x+(i-(KUI_TAPS-1)/2)*r*.32,py=k.y+r*1.25;
-    ctx.fillStyle=i<k.hits?'#ff8a3d':'rgba(255,255,255,.75)';ctx.strokeStyle='#5b2a6e';ctx.lineWidth=1.2;ctx.beginPath();ctx.arc(px,py,r*.1,0,7);ctx.fill();ctx.stroke()}}
+  if(k.hits>0&&k.phase!=='flee'&&k.phase!=='leave'&&k.phase!=='grin'){const bw=Math.max(70,r*1.6),bh=9,bx=k.x-bw/2,by=k.y+r*1.08,f=Math.min(1,k.hits/KUI_TAPS);
+    ctx.fillStyle='rgba(255,255,255,.85)';ctx.strokeStyle='#5b2a6e';ctx.lineWidth=1.5;ctx.beginPath();ctx.roundRect?ctx.roundRect(bx,by,bw,bh,bh/2):ctx.rect(bx,by,bw,bh);ctx.fill();ctx.stroke();
+    ctx.fillStyle=f>.75?'#ff4d6d':'#ff8a3d';ctx.beginPath();ctx.roundRect?ctx.roundRect(bx+1.5,by+1.5,(bw-3)*f,bh-3,(bh-3)/2):ctx.rect(bx+1.5,by+1.5,(bw-3)*f,bh-3);ctx.fill()}
 }
 
 /* ---------- touch: tap empty space to drop, hold a slime and pull to fling ---------- */

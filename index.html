@@ -234,7 +234,9 @@ function celebrateRecord(n){
 }
 function addScore(n){if(!started)return;score+=n;$score.textContent=score.toLocaleString();$score.parentNode.classList.toggle('long',score>=1e6);$score.classList.add('bump');setTimeout(()=>$score.classList.remove('bump'),120);
   if(score>rec.hi){rec.hi=score;saveRec()}$hi.textContent=rec.hi.toLocaleString();
-  for(let i=rec.open+1;i<STAGES.length&&rec.hi>=STAGES[i].need;i++){rec.open=i;rec.newOpen=i;saveRec();stageUnlocked(i)}}
+  for(let i=rec.open+1;i<STAGES.length&&rec.hi>=STAGES[i].need;i++){rec.open=i;rec.newOpen=-1;saveRec()}
+  // the scenery moves on while you play: reach the next stage's score and the jar turns into the next parfait
+  while(curStage+1<STAGES.length&&score>=STAGES[curStage+1].need){applyStage(curStage+1);rec.stage=curStage;saveRec();stageUnlocked(curStage)}}
 function showRec(){$hi.textContent=rec.hi.toLocaleString();document.getElementById('mc').textContent=rec.maxCombo||0;$best.textContent=rec.best?LV[rec.best].n:'—';setMini($bestIco,rec.best||0);$rain.textContent=rec.rainbows;muteBtn.textContent=rec.muted?'音 なし':'音 あり';
   [...ladder.children].forEach((d,i)=>d.classList.toggle('got',i+1<=rec.best))}
 showRec();
@@ -720,16 +722,16 @@ const STAGES=[
   {n:'ストロベリーショートグラス',need:0,sw:'linear-gradient(#fff 0 35%,#ff8fab 35% 68%,#e8364f 68%)',
     bg:'#fdedf2',dot:'rgba(232,80,120,.14)',bgD:'#2a1c22',dotD:'rgba(255,150,180,.07)',tint:'rgba(255,190,210,.5)',
     layers:['rgba(232,54,79,.32)','rgba(255,143,171,.32)','rgba(255,255,255,.6)'],cap:'#fff8f2',capEdge:'#e98aa3',dotc:'#ff8fab',drip:'#e8364f',top:'straw'},
-  {n:'ショコラ・フォンダンジャー',need:5000,sw:'linear-gradient(#f3e3cf 0 32%,#8b5a3c 32% 66%,#4a2c1f 66%)',
+  {n:'ショコラ・フォンダンジャー',need:300000,sw:'linear-gradient(#f3e3cf 0 32%,#8b5a3c 32% 66%,#4a2c1f 66%)',
     bg:'#e6d5c6',dot:'rgba(90,55,35,.16)',bgD:'#21180f',dotD:'rgba(230,190,140,.07)',tint:'rgba(150,95,60,.32)',
     layers:['rgba(74,44,31,.45)','rgba(139,90,60,.34)','rgba(243,227,207,.55)'],cap:'#6b3f2a',capEdge:'#3b2116',dotc:'#e8c46a',drip:'#4a2c1f',top:'choco'},
-  {n:'抹茶白玉クリームサンデー',need:15000,sw:'linear-gradient(#fffaf0 0 32%,#a8c97a 32% 66%,#5f8a3a 66%)',
+  {n:'抹茶白玉クリームサンデー',need:900000,sw:'linear-gradient(#fffaf0 0 32%,#a8c97a 32% 66%,#5f8a3a 66%)',
     bg:'#e9f1de',dot:'rgba(95,138,58,.16)',bgD:'#18211a',dotD:'rgba(170,210,130,.07)',tint:'rgba(170,205,125,.4)',
     layers:['rgba(95,138,58,.4)','rgba(168,201,122,.36)','rgba(255,250,240,.6)'],cap:'#8fb965',capEdge:'#4f7a2e',dotc:'#fffaf0',drip:'#5f8a3a',top:'matcha'},
-  {n:'ブルーハワイ・ソーダフロート',need:30000,sw:'linear-gradient(#fffaf0 0 32%,#7fd6f5 32% 66%,#2a9fd8 66%)',
+  {n:'ブルーハワイ・ソーダフロート',need:1800000,sw:'linear-gradient(#fffaf0 0 32%,#7fd6f5 32% 66%,#2a9fd8 66%)',
     bg:'#def3fb',dot:'rgba(42,159,216,.16)',bgD:'#13202a',dotD:'rgba(130,210,245,.07)',tint:'rgba(110,200,240,.42)',
     layers:['rgba(42,159,216,.34)','rgba(127,214,245,.34)','rgba(255,255,255,.55)'],cap:'#9fe0f7',capEdge:'#2a9fd8',dotc:'#ffffff',drip:'#2a9fd8',top:'soda'},
-  {n:'レインボー・シュガーパフェ',need:50000,sw:'conic-gradient(#ff6b6b,#ffd93d,#6bcb77,#4dd6ff,#4d96ff,#c58cf0,#ff6b6b)',
+  {n:'レインボー・シュガーパフェ',need:3000000,sw:'conic-gradient(#ff6b6b,#ffd93d,#6bcb77,#4dd6ff,#4d96ff,#c58cf0,#ff6b6b)',
     bg:'#f6efff',dot:'rgba(150,110,220,.15)',grad:'linear-gradient(160deg,rgba(255,180,180,.38),rgba(255,236,150,.32),rgba(170,235,180,.32),rgba(150,210,255,.38),rgba(210,170,255,.42))',
     bgD:'#1e1a2a',dotD:'rgba(200,170,255,.08)',tint:'rgba(220,190,255,.42)',layers:['rainbow'],cap:'#fff4fb',capEdge:'#c58cf0',dotc:'rainbow',drip:'#c58cf0',top:'rainbow'},
 ];
@@ -739,7 +741,7 @@ function applyStage(i){curStage=Math.max(0,Math.min(STAGES.length-1,i|0));const 
   r.setProperty('--bg',d?st.bgD:st.bg);r.setProperty('--bg-dot',d?st.dotD:st.dot);r.setProperty('--bg-grad',!d&&st.grad?st.grad:'linear-gradient(transparent,transparent)')}
 applyStage(rec.stage);
 function stageUnlocked(i){const st=STAGES[i];
-  floats.push({x:J.x+J.w/2,y:J.y+J.h*.3,text:'新ステージ解放！',sub:st.n,life:1,big:true,rainbow:true});
+  floats.push({x:J.x+J.w/2,y:J.y+J.h*.3,text:`ステージ${i+1}へ！`,sub:st.n,life:1,big:true,rainbow:true});flash(.35);
   RAINBOW.forEach((c,k)=>setTimeout(()=>burst(J.x+J.w*(.15+.14*k),J.y+J.h*.3,c,12,18),k*60));
   [784,988,1175,1568].forEach((f,k)=>tone('triangle',f,f,f,.3,.15,k*.09))}
 const $stages=document.getElementById('stages'),$stlist=document.getElementById('stlist'),$reset=document.getElementById('reset'),$cont=document.getElementById('cont');

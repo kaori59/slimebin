@@ -49,7 +49,7 @@ img{max-width:100%}
 html,body{height:100%}html{height:100dvh}
 body{background:var(--bg);color:var(--ink);font-family:var(--font);overflow:hidden;display:flex;flex-direction:column;
   -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
-  background-image:radial-gradient(var(--bg-dot) 1.5px,transparent 1.6px),var(--bg-grad,linear-gradient(transparent,transparent));background-size:22px 22px,100% 100%;transition:background-color .6s}
+  background-image:var(--bg-pat,radial-gradient(var(--bg-dot) 1.5px,transparent 1.6px)),var(--bg-grad,linear-gradient(transparent,transparent));background-size:var(--bg-size,22px 22px),100% 100%;transition:background-color .6s}
 .pad{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 /* header: sticker logo + pink jelly score capsule, then a stitched jar label holding the stats */
 header{display:flex;flex-direction:column;gap:7px;padding-block:9px 2px;max-width:720px;width:100%;margin-inline:auto;box-sizing:border-box}
@@ -736,9 +736,53 @@ const STAGES=[
     bgD:'#1e1a2a',dotD:'rgba(200,170,255,.08)',tint:'rgba(220,190,255,.42)',layers:['rainbow'],cap:'#fff4fb',capEdge:'#c58cf0',dotc:'rainbow',drip:'#c58cf0',top:'rainbow'},
 ];
 let curStage=0;
+/* sweets wallpaper: a small tile of sweets, repeated behind everything */
+const SWEET={
+  straw:'<path d="M0 12C-11 2-9-7 0-7S11 2 0 12Z" fill="#ff6b81"/><path d="M-7-7 0-3 7-7 3-11 0-8-3-11Z" fill="#5cb85c"/><g fill="#fff3b0"><circle cx="-3" cy="-1" r="1"/><circle cx="3" cy="0" r="1"/><circle cx="0" cy="4" r="1"/></g>',
+  cream:'<g fill="#fff" stroke="#f2a7bb" stroke-width="1.3"><path d="M-10 9h20l-2-5h-16z"/><path d="M-8 4c0-6 16-6 16 0z"/><path d="M-5-2c0-6 10-6 10 0z"/><path d="M-2-7c0-5 4-5 4 0z"/></g>',
+  heart:'<path d="M0 8C-10 0-7-8 0-3 7-8 10 0 0 8Z" fill="#ffb3c6"/>',
+  cake:'<path d="M-11 9V-1L9-8l2 2V9z" fill="#fff6ea" stroke="#f0b8c5" stroke-width="1.2"/><path d="M-11 3h22" stroke="#ff8fab" stroke-width="2.5"/><path d="M-11-1 9-8l2 2" fill="none" stroke="#ff8fab" stroke-width="2"/><circle cx="2" cy="-10" r="3.5" fill="#e8364f"/>',
+  choco:'<rect x="-10" y="-8" width="20" height="16" rx="2" fill="#7b4a33"/><path d="M-3-8v16M4-8v16M-10 0h20" stroke="#5a3322" stroke-width="1.3"/>',
+  macaron:'<ellipse cy="-4" rx="10" ry="4.5" fill="#b07a55"/><rect x="-9" y="-2" width="18" height="4" rx="2" fill="#f6e7d2"/><ellipse cy="4.5" rx="10" ry="4.5" fill="#b07a55"/>',
+  gold:'<path d="M0-9 2.6-3 9-2.8 4 1.4 5.6 8 0 4.4-5.6 8-4 1.4-9-2.8-2.6-3Z" fill="#e8c46a"/>',
+  truffle:'<circle r="8" fill="#5a3322"/><path d="M-6-3c3 2 9 2 12 0" stroke="#e8c46a" stroke-width="1.5" fill="none"/>',
+  dango:'<path d="M0-16V16" stroke="#c9a46a" stroke-width="1.8"/><circle cy="-9" r="5.5" fill="#ffc2d1"/><circle r="5.5" fill="#fffaf0" stroke="#e3d8c4"/><circle cy="9" r="5.5" fill="#9ccc65"/>',
+  bowl:'<path d="M-11-2h22a11 9 0 0 1-22 0z" fill="#5f8a3a"/><ellipse cy="-2" rx="11" ry="3" fill="#a8c97a"/><rect x="-4" y="7" width="8" height="2.5" rx="1" fill="#5f8a3a"/>',
+  leaf:'<path d="M-8 6C-8-4 0-9 9-8 8 1 3 8-8 6Z" fill="#8fb965"/><path d="M-8 6 5-5" stroke="#5f8a3a" stroke-width="1.2"/>',
+  bean:'<g fill="#7a2433"><ellipse cx="-4" cy="1" rx="3.5" ry="2.6" transform="rotate(20 -4 1)"/><ellipse cx="3" cy="-2" rx="3.5" ry="2.6"/><ellipse cx="2" cy="5" rx="3.5" ry="2.6" transform="rotate(-25 2 5)"/></g>',
+  cone:'<path d="M-6 0 0 14 6 0Z" fill="#e2b77a"/><path d="M-4 3 3 9M-2 9 4 3" stroke="#c99a5c" stroke-width="1"/><circle cy="-4" r="7.5" fill="#fff6e0"/><circle cx="1" cy="-12" r="2.8" fill="#e8243f"/>',
+  bubble:'<g fill="rgba(255,255,255,.45)" stroke="#fff" stroke-width="1.5"><circle r="6"/><circle cx="9" cy="-8" r="3"/><circle cx="-8" cy="8" r="2.2"/></g>',
+  lemon:'<circle r="9" fill="#ffe27a" stroke="#f5c400" stroke-width="1.5"/><path d="M0-8V8M-7-4 7 4M-7 4 7-4" stroke="#fff6c2" stroke-width="1.3"/>',
+  cherry:'<path d="M-4 3C-3-6 1-10 6-11M4 4C4-4 5-8 6-11" stroke="#4a7a2a" stroke-width="1.3" fill="none"/><circle cx="-4" cy="5" r="4.5" fill="#e8243f"/><circle cx="4" cy="6" r="4.5" fill="#e8243f"/>',
+  candy:'<path d="M-6 0-13-5v10ZM6 0 13-5v10Z" fill="#9fd8ff"/><circle r="6.5" fill="#ff9fd0"/><path d="M-3-5 3 5" stroke="#fff" stroke-width="1.5"/>',
+  lolly:'<path d="M0 8V18" stroke="#fff" stroke-width="2"/><circle r="9" fill="#ffd93d"/><path d="M0 0a3 3 0 0 1 5 1 6 6 0 0 1-9 3 8 8 0 0 1 11-9" stroke="#ff6b6b" stroke-width="2" fill="none"/>',
+  star:'<path d="M0-9 2.6-3 9-2.8 4 1.4 5.6 8 0 4.4-5.6 8-4 1.4-9-2.8-2.6-3Z" fill="#c58cf0"/>',
+  sprinkle:'<g stroke-width="2.6" stroke-linecap="round"><path d="M-8-6-4-8" stroke="#ff6b6b"/><path d="M3-7 7-4" stroke="#4dd6ff"/><path d="M-6 4-2 7" stroke="#6bcb77"/><path d="M4 3 8 6" stroke="#ffd93d"/><path d="M-1-1 1 2" stroke="#c58cf0"/></g>',
+};
+// each stage: [motif, x, y, rotation, scale] on a 150px tile
+const WALL=[
+  [['straw',24,26,-15,1.35],['cream',92,20,8,1.3],['heart',140,58,10,1],['cake',52,88,-6,1.4],['straw',116,112,20,1.15],['heart',14,124,-12,.9],['cherry',90,62,8,1.05],['heart',62,140,15,.75],['cream',140,140,-6,1]],
+  [['choco',26,28,-12,1.35],['macaron',96,22,8,1.35],['gold',140,58,0,1],['truffle',56,90,0,1.3],['gold',18,116,15,.8],['macaron',118,114,-10,1.2],['truffle',96,64,0,.9],['gold',70,138,-10,.7],['choco',142,140,20,1]],
+  [['dango',22,34,-25,1.3],['leaf',94,20,10,1.3],['bean',140,58,0,1.1],['bowl',58,92,0,1.4],['leaf',16,124,-30,1],['dango',122,116,25,1.15],['bean',92,62,30,.9],['leaf',70,140,40,.8],['bean',142,142,0,.8]],
+  [['cone',26,30,-12,1.35],['bubble',96,26,0,1.3],['lemon',140,60,15,1.1],['cherry',56,92,0,1.35],['bubble',16,120,0,1],['cone',120,116,14,1.15],['bubble',92,64,0,.7],['lemon',66,140,-10,.8],['cherry',142,142,15,.9]],
+  [['candy',26,26,-18,1.35],['star',96,20,10,1.3],['sprinkle',140,58,0,1.2],['lolly',58,86,-8,1.3],['sprinkle',16,120,40,1.1],['star',120,116,-15,1.1],['candy',94,62,25,.9],['star',66,140,0,.8],['sprinkle',142,140,-20,.9]],
+];
+// a soft base pattern under the sweets: gingham, stripes, dots ... like wrapping paper
+const WALLBASE=[
+  '<g fill="#ff8fab" opacity=".13"><rect x="0" y="0" width="150" height="25"/><rect x="0" y="50" width="150" height="25"/><rect x="0" y="100" width="150" height="25"/><rect x="0" y="0" width="25" height="150"/><rect x="50" y="0" width="25" height="150"/><rect x="100" y="0" width="25" height="150"/></g>',
+  '<g stroke="#7b4a33" stroke-width="10" opacity=".08"><path d="M-20 20 20-20M-20 70 70-20M-20 120 120-20M-20 170 170-20M30 170 170 30M80 170 170 80M130 170 170 130"/></g>',
+  '<g fill="#fffaf0" opacity=".7"><circle cx="37" cy="0" r="2.5"/><circle cx="112" cy="0" r="2.5"/><circle cx="0" cy="75" r="2.5"/><circle cx="75" cy="75" r="2.5"/><circle cx="150" cy="75" r="2.5"/><circle cx="37" cy="150" r="2.5"/><circle cx="112" cy="150" r="2.5"/><circle cx="75" cy="37" r="1.6"/><circle cx="37" cy="112" r="1.6"/><circle cx="112" cy="112" r="1.6"/></g>',
+  '<g fill="#ffffff" opacity=".5"><rect x="0" y="0" width="12" height="150"/><rect x="37" y="0" width="12" height="150"/><rect x="75" y="0" width="12" height="150"/><rect x="112" y="0" width="12" height="150"/></g>',
+  '<g stroke-width="9" opacity=".14"><path d="M30 -20 -20 30 M180 -20 -20 180" stroke="#ff6b6b"/><path d="M60 -20 -20 60 M210 -20 -20 210" stroke="#ffd93d"/><path d="M90 -20 -20 90 M240 -20 -20 240" stroke="#6bcb77"/><path d="M120 -20 -20 120 M270 -20 -20 270" stroke="#4d96ff"/><path d="M150 -20 -20 150 M300 -20 -20 300" stroke="#c58cf0"/></g>',
+];
+const wallCache={};
+function wallUrl(i,dark){const k=i+(dark?'d':'');if(wallCache[k])return wallCache[k];
+  const g=WALL[i].map(([m,x,y,r,sc])=>`<g transform="translate(${x} ${y}) rotate(${r}) scale(${sc})">${SWEET[m]}</g>`).join('');
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" viewBox="0 0 150 150"><g opacity="${dark?.3:1}">${WALLBASE[i]}<g opacity=".78">${g}</g></g></svg>`;
+  return wallCache[k]=`url("data:image/svg+xml,${encodeURIComponent(svg)}")`}
 const isDark=()=>{const t=document.documentElement.dataset.theme;return t==='dark'||(t!=='light'&&matchMedia('(prefers-color-scheme: dark)').matches)};
 function applyStage(i){curStage=Math.max(0,Math.min(STAGES.length-1,i|0));const st=STAGES[curStage],d=isDark(),r=document.documentElement.style;
-  r.setProperty('--bg',d?st.bgD:st.bg);r.setProperty('--bg-dot',d?st.dotD:st.dot);r.setProperty('--bg-grad',!d&&st.grad?st.grad:'linear-gradient(transparent,transparent)')}
+  r.setProperty('--bg',d?st.bgD:st.bg);r.setProperty('--bg-dot',d?st.dotD:st.dot);r.setProperty('--bg-grad',!d&&st.grad?st.grad:'linear-gradient(transparent,transparent)');r.setProperty('--bg-pat',wallUrl(curStage,d));r.setProperty('--bg-size','150px 150px')}
 applyStage(rec.stage);
 function stageUnlocked(i){const st=STAGES[i];
   floats.push({x:J.x+J.w/2,y:J.y+J.h*.3,text:`ステージ${i+1}へ！`,sub:st.n,life:1,big:true,rainbow:true});flash(.35);
